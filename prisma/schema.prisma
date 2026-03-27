@@ -1,0 +1,170 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  TEACHER
+}
+
+model User {
+  id             String         @id @default(cuid())
+  email          String         @unique
+  name           String
+  role           UserRole
+  isActive       Boolean        @default(true) @map("is_active")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  lectures       Lecture[]
+  taskDrafts     TaskDraft[]
+  tasks          Task[]
+  submissions    Submission[]
+  reviewRecords  ReviewRecord[]
+  uploadedAssets Asset[]
+  auditLogs      AuditLog[]
+
+  @@map("users")
+}
+
+model Lecture {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  createdById String      @map("created_by_id")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  createdBy   User        @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  taskDrafts  TaskDraft[]
+  tasks       Task[]
+  assets      Asset[]
+
+  @@index([createdById])
+  @@map("lectures")
+}
+
+model TaskDraft {
+  id          String   @id @default(cuid())
+  lectureId   String   @map("lecture_id")
+  createdById String   @map("created_by_id")
+  title       String
+  texSource   String   @map("tex_source") @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  lecture     Lecture  @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  tasks       Task[]
+  assets      Asset[]
+
+  @@index([lectureId])
+  @@index([createdById])
+  @@map("task_drafts")
+}
+
+model Task {
+  id                String         @id @default(cuid())
+  lectureId         String         @map("lecture_id")
+  draftId           String?        @map("draft_id")
+  createdById       String         @map("created_by_id")
+  title             String
+  compiler          String         @default("xelatex")
+  lastCompileStatus String?        @map("last_compile_status")
+  lastCompileLog    String?        @map("last_compile_log") @db.Text
+  lastPdfPath       String?        @map("last_pdf_path")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+  lecture           Lecture        @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+  draft             TaskDraft?     @relation(fields: [draftId], references: [id], onDelete: SetNull)
+  createdBy         User           @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  submissions       Submission[]
+  reviewRecords     ReviewRecord[]
+  assets            Asset[]
+
+  @@index([lectureId])
+  @@index([draftId])
+  @@index([createdById])
+  @@map("tasks")
+}
+
+model Submission {
+  id            String         @id @default(cuid())
+  taskId        String         @map("task_id")
+  submittedById String         @map("submitted_by_id")
+  status        String?
+  submittedAt   DateTime       @default(now()) @map("submitted_at")
+  contentPath   String?        @map("content_path")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  task          Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  submittedBy   User           @relation(fields: [submittedById], references: [id], onDelete: Restrict)
+  reviewRecords ReviewRecord[]
+
+  @@index([taskId])
+  @@index([submittedById])
+  @@map("submissions")
+}
+
+model ReviewRecord {
+  id           String      @id @default(cuid())
+  taskId       String      @map("task_id")
+  submissionId String?     @map("submission_id")
+  reviewerId   String      @map("reviewer_id")
+  action       String
+  comment      String?     @db.Text
+  createdAt    DateTime    @default(now()) @map("created_at")
+  task         Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  submission   Submission? @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+  reviewer     User        @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  @@index([taskId])
+  @@index([submissionId])
+  @@index([reviewerId])
+  @@map("review_records")
+}
+
+model Asset {
+  id           String     @id @default(cuid())
+  lectureId    String?    @map("lecture_id")
+  taskId       String?    @map("task_id")
+  taskDraftId  String?    @map("task_draft_id")
+  uploadedById String     @map("uploaded_by_id")
+  fileName     String     @map("file_name")
+  filePath     String     @map("file_path")
+  mimeType     String?    @map("mime_type")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  lecture      Lecture?   @relation(fields: [lectureId], references: [id], onDelete: SetNull)
+  task         Task?      @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  taskDraft    TaskDraft? @relation(fields: [taskDraftId], references: [id], onDelete: SetNull)
+  uploadedBy   User       @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  @@index([lectureId])
+  @@index([taskId])
+  @@index([taskDraftId])
+  @@index([uploadedById])
+  @@map("assets")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?  @map("actor_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+  detail     Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
