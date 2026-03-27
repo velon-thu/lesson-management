@@ -69,8 +69,13 @@ export default async function AdminPage() {
         />
         <FeatureCard
           icon="A4"
-          title="系统日志"
-          description="用于查看关键操作记录和后台审计信息。当前为 UI 占位。"
+          title="审核任务"
+          description="查看老师已提交的任务，进入 PDF 预览与源码差异页面，并执行退回修改或合并到主分支。"
+          footer={
+            <Link href="/admin/reviews" className="text-link">
+              进入审核列表
+            </Link>
+          }
         />
       </section>
 

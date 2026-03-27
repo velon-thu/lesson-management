@@ -8,6 +8,7 @@ const links = [
   { href: "/admin/lectures", label: "讲义管理" },
   { href: "/admin/teachers", label: "老师列表" },
   { href: "/admin/tasks/assign", label: "任务分配" },
+  { href: "/admin/reviews", label: "审核任务" },
 ];
 
 export default function AdminSectionNav() {

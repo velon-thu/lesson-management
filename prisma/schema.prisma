@@ -28,7 +28,9 @@ enum TaskStatus {
   ASSIGNED
   IN_PROGRESS
   SUBMITTED
+  CHANGES_REQUESTED
   REVIEWING
+  MERGED
   COMPLETED
 }
 
@@ -128,6 +130,8 @@ model Submission {
   taskId        String         @map("task_id")
   submittedById String         @map("submitted_by_id")
   status        String?
+  branchName    String?        @map("branch_name")
+  commitSha     String?        @map("commit_sha")
   submittedAt   DateTime       @default(now()) @map("submitted_at")
   contentPath   String?        @map("content_path")
   createdAt     DateTime       @default(now()) @map("created_at")

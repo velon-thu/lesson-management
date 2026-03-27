@@ -1,0 +1,120 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { TaskStatus } from "@prisma/client";
+import { requireRole } from "@/lib/auth";
+import { mergeTaskBranchToMain } from "@/lib/gitea-submit";
+import { prisma } from "@/lib/prisma";
+
+function buildReviewUrl(taskId: string, params?: Record<string, string>) {
+  const url = new URL(`http://local/admin/reviews/${taskId}`);
+
+  if (params) {
+    for (const [key, value] of Object.entries(params)) {
+      url.searchParams.set(key, value);
+    }
+  }
+
+  return `${url.pathname}${url.search}`;
+}
+
+export async function handleReviewDecisionAction(taskId: string, formData: FormData) {
+  const admin = await requireRole("admin");
+  const decision = String(formData.get("decision") ?? "").trim();
+  const comment = String(formData.get("comment") ?? "").trim();
+
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    include: {
+      submissions: {
+        orderBy: { submittedAt: "desc" },
+        take: 1,
+      },
+    },
+  });
+
+  if (!task) {
+    redirect("/admin/reviews");
+  }
+
+  const latestSubmission = task.submissions[0];
+
+  if (!latestSubmission) {
+    redirect(buildReviewUrl(taskId, { error: "missing-submission" }));
+  }
+
+  if (decision === "changes_requested") {
+    if (!comment) {
+      redirect(buildReviewUrl(taskId, { error: "comment-required" }));
+    }
+
+    await prisma.$transaction([
+      prisma.task.update({
+        where: { id: task.id },
+        data: {
+          status: TaskStatus.CHANGES_REQUESTED,
+        },
+      }),
+      prisma.reviewRecord.create({
+        data: {
+          taskId: task.id,
+          submissionId: latestSubmission.id,
+          reviewerId: admin.id,
+          action: "CHANGES_REQUESTED",
+          comment,
+        },
+      }),
+    ]);
+
+    revalidatePath("/admin/reviews");
+    revalidatePath(`/admin/reviews/${taskId}`);
+    revalidatePath(`/teacher/tasks/${taskId}`);
+    revalidatePath(`/teacher/tasks/${taskId}/edit`);
+    redirect(buildReviewUrl(taskId, { success: "changes-requested" }));
+  }
+
+  if (decision === "approve_merge") {
+    if (!task.branchName || !latestSubmission.commitSha) {
+      redirect(buildReviewUrl(taskId, { error: "missing-branch" }));
+    }
+
+    try {
+      const mergeResult = await mergeTaskBranchToMain({
+        branchName: task.branchName,
+        taskId: task.id,
+      });
+
+      await prisma.$transaction([
+        prisma.task.update({
+          where: { id: task.id },
+          data: {
+            status: TaskStatus.MERGED,
+          },
+        }),
+        prisma.reviewRecord.create({
+          data: {
+            taskId: task.id,
+            submissionId: latestSubmission.id,
+            reviewerId: admin.id,
+            action: "APPROVED_AND_MERGED",
+            comment:
+              comment ||
+              `管理员已通过审核并合并到主分支，merge commit: ${mergeResult.mergeCommitSha.slice(0, 12)}。`,
+          },
+        }),
+      ]);
+
+      revalidatePath("/admin/reviews");
+      revalidatePath(`/admin/reviews/${taskId}`);
+      revalidatePath(`/teacher/tasks/${taskId}`);
+      revalidatePath(`/teacher/tasks/${taskId}/edit`);
+      redirect(buildReviewUrl(taskId, { success: "merged" }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "合并任务分支失败。";
+      redirect(buildReviewUrl(taskId, { error: message }));
+    }
+  }
+
+  redirect(buildReviewUrl(taskId, { error: "invalid-decision" }));
+}

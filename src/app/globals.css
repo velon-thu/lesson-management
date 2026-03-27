@@ -610,6 +610,150 @@ code {
   gap: 8px;
 }
 
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.detail-card {
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.detail-card h3,
+.section-heading h3,
+.snippet-box h4 {
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+
+.detail-card p,
+.section-heading p,
+.asset-item p,
+.review-item p {
+  color: #64748b;
+  line-height: 1.7;
+}
+
+.editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(300px, 1fr);
+  gap: 20px;
+}
+
+.review-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
+  gap: 20px;
+}
+
+.review-preview,
+.review-sidebar,
+.review-diff-grid,
+.review-action-form {
+  display: grid;
+  gap: 18px;
+}
+
+.review-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.editor-main,
+.editor-sidebar,
+.review-list,
+.asset-list {
+  display: grid;
+  gap: 18px;
+}
+
+.compile-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.editor-form {
+  display: grid;
+  gap: 18px;
+}
+
+.editor-textarea {
+  min-height: 560px;
+  font-family: "SFMono-Regular", ui-monospace, Menlo, Monaco, Consolas, monospace;
+  line-height: 1.6;
+}
+
+.upload-form,
+.section-heading {
+  display: grid;
+  gap: 12px;
+}
+
+.snippet-box {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.snippet-box textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+  resize: vertical;
+}
+
+.pdf-preview-frame {
+  width: 100%;
+  min-height: 720px;
+  border: 1px solid #cbd5e1;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.log-box {
+  max-height: 320px;
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+.log-box pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: "SFMono-Regular", ui-monospace, Menlo, Monaco, Consolas, monospace;
+  line-height: 1.6;
+}
+
+.review-item,
+.asset-item {
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.review-item span,
+.asset-item span {
+  display: inline-block;
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 13px;
+}
+
 @media (max-width: 900px) {
   .site-header-inner,
   .page-header,
@@ -633,6 +777,17 @@ code {
   }
 
   .admin-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-grid,
+  .editor-layout,
+  .review-layout,
+  .review-diff-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .compile-meta {
     grid-template-columns: 1fr;
   }
 }
