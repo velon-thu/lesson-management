@@ -1,12 +1,15 @@
-export default function LoginPage() {
-  return (
-    <main className="page">
-      <div className="site-shell">
-        <section className="page-card">
-          <h1>登录页</h1>
-          <p>这里先保留为最基础的登录页面占位，后续再接入表单和鉴权逻辑。</p>
-        </section>
-      </div>
-    </main>
-  );
+import { redirect } from "next/navigation";
+import { getCurrentUser, getRedirectPathByRole } from "@/lib/auth";
+
+export default async function LoginPage({
+}: {
+  searchParams?: { error?: string };
+}) {
+  const user = await getCurrentUser();
+
+  if (user) {
+    redirect(getRedirectPathByRole(user.role));
+  }
+
+  redirect("/");
 }

@@ -18,9 +18,25 @@ enum UserRole {
   TEACHER
 }
 
+enum LectureStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum TaskStatus {
+  ASSIGNED
+  IN_PROGRESS
+  SUBMITTED
+  REVIEWING
+  COMPLETED
+}
+
 model User {
   id             String         @id @default(cuid())
+  username       String?        @unique
   email          String         @unique
+  passwordHash   String?        @map("password_hash")
   name           String
   role           UserRole
   isActive       Boolean        @default(true) @map("is_active")
@@ -28,7 +44,8 @@ model User {
   updatedAt      DateTime       @updatedAt @map("updated_at")
   lectures       Lecture[]
   taskDrafts     TaskDraft[]
-  tasks          Task[]
+  createdTasks   Task[]         @relation("TaskCreator")
+  assignedTasks  Task[]         @relation("TaskAssignee")
   submissions    Submission[]
   reviewRecords  ReviewRecord[]
   uploadedAssets Asset[]
@@ -38,16 +55,21 @@ model User {
 }
 
 model Lecture {
-  id          String      @id @default(cuid())
-  title       String
-  description String?
-  createdById String      @map("created_by_id")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
-  createdBy   User        @relation(fields: [createdById], references: [id], onDelete: Restrict)
-  taskDrafts  TaskDraft[]
-  tasks       Task[]
-  assets      Asset[]
+  id           String        @id @default(cuid())
+  code         String        @unique
+  title        String
+  chapter      String
+  description  String?
+  deadline     DateTime?
+  templatePath String        @map("template_path")
+  status       LectureStatus @default(DRAFT)
+  createdById  String        @map("created_by_id")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  createdBy    User          @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  taskDrafts   TaskDraft[]
+  tasks        Task[]
+  assets       Asset[]
 
   @@index([createdById])
   @@map("lectures")
@@ -76,7 +98,10 @@ model Task {
   lectureId         String         @map("lecture_id")
   draftId           String?        @map("draft_id")
   createdById       String         @map("created_by_id")
+  assigneeId        String         @map("assignee_id")
   title             String
+  branchName        String         @unique @map("branch_name")
+  status            TaskStatus     @default(ASSIGNED)
   compiler          String         @default("xelatex")
   lastCompileStatus String?        @map("last_compile_status")
   lastCompileLog    String?        @map("last_compile_log") @db.Text
@@ -85,7 +110,8 @@ model Task {
   updatedAt         DateTime       @updatedAt @map("updated_at")
   lecture           Lecture        @relation(fields: [lectureId], references: [id], onDelete: Cascade)
   draft             TaskDraft?     @relation(fields: [draftId], references: [id], onDelete: SetNull)
-  createdBy         User           @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdBy         User           @relation("TaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  assignee          User           @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
   submissions       Submission[]
   reviewRecords     ReviewRecord[]
   assets            Asset[]
@@ -93,6 +119,7 @@ model Task {
   @@index([lectureId])
   @@index([draftId])
   @@index([createdById])
+  @@index([assigneeId])
   @@map("tasks")
 }
 

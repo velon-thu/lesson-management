@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import SiteNav from "@/components/site-nav";
+import Header from "@/components/header";
 
 export const metadata: Metadata = {
   title: "中佳九学讲义管理系统",
@@ -15,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body>
-        <SiteNav />
+        <Header />
         {children}
       </body>
     </html>
