@@ -1,4 +1,6 @@
 import { requireRole } from "@/lib/auth";
+import { listRepoDirectories } from "@/lib/gitea-submit";
+import { getLectureRepoFolder, getLectureTexFileName } from "@/lib/lecture-repo-path";
 import { prisma } from "@/lib/prisma";
 import { assignTaskAction } from "@/app/admin/actions";
 import AdminSectionNav from "@/components/admin-section-nav";
@@ -18,15 +20,21 @@ type PageProps = {
 export default async function AdminTaskAssignPage({ searchParams }: PageProps) {
   await requireRole("admin");
 
-  const [lectures, teachers, tasks] = await Promise.all([
+  const [lectures, teachers, tasks, repoFolders] = await Promise.all([
     prisma.lecture.findMany({
-      orderBy: [{ status: "asc" }, { code: "asc" }],
+      where: {
+        status: "TODO",
+        tasks: {
+          none: {},
+        },
+      },
+      orderBy: { code: "asc" },
       select: {
         id: true,
         code: true,
         title: true,
-        chapter: true,
         status: true,
+        templatePath: true,
       },
     }),
     prisma.user.findMany({
@@ -47,12 +55,12 @@ export default async function AdminTaskAssignPage({ searchParams }: PageProps) {
       select: {
         id: true,
         title: true,
-        branchName: true,
-        status: true,
         lecture: {
           select: {
             code: true,
             title: true,
+            status: true,
+            templatePath: true,
           },
         },
         assignee: {
@@ -63,29 +71,44 @@ export default async function AdminTaskAssignPage({ searchParams }: PageProps) {
         },
       },
     }),
+    listRepoDirectories().catch(() => [""]),
   ]);
 
   const canAssign = lectures.length > 0 && teachers.length > 0;
+  const selectedLecture =
+    lectures.find((lecture) => lecture.id === searchParams?.lectureId) ?? lectures[0] ?? null;
+  const defaultRepoFolder = selectedLecture ? getLectureRepoFolder(selectedLecture.templatePath) : "";
+  const defaultTexFileName = selectedLecture ? getLectureTexFileName(selectedLecture.templatePath) : "";
 
   return (
     <PageContainer
       title="任务分配"
-      subtitle="选择讲义和老师后，系统会自动创建 task、生成默认分支名，并初始化 main.tex 到 task_drafts.tex_source。"
-      badge="Assign Task"
+      wide
+      hideHeader
     >
-      <AdminSectionNav />
+      <div className="page-header">
+        <AdminSectionNav />
+      </div>
 
       {searchParams?.success ? (
         <div className="feedback-banner success">任务已分配，初始草稿也已生成。</div>
       ) : null}
       {searchParams?.error ? (
-        <div className="feedback-banner error">请选择讲义和老师后再提交。</div>
+        <div className="feedback-banner error">
+          {searchParams.error === "assigned"
+            ? "该讲义已分配任务，不能重复分配。"
+            : searchParams.error === "exists"
+              ? "仓库中已存在同名 .tex 文件，请更换文件夹或文件名。"
+              : searchParams.error === "missing"
+                ? "请选择讲义和老师，并填写讲义文件名后再提交。"
+                : searchParams.error}
+        </div>
       ) : null}
 
       {!canAssign ? (
         <EmptyState
           title="暂时无法分配任务"
-          description="请先准备至少一条讲义记录和一个老师账号。"
+          description="请先准备至少一条未分配讲义和一个老师账号。"
         />
       ) : (
         <section className="form-card">
@@ -96,7 +119,7 @@ export default async function AdminTaskAssignPage({ searchParams }: PageProps) {
                 <option value="">请选择讲义</option>
                 {lectures.map((lecture) => (
                   <option key={lecture.id} value={lecture.id}>
-                    {lecture.code} / {lecture.title} / {lecture.chapter}
+                    {lecture.code} / {lecture.title}
                   </option>
                 ))}
               </select>
@@ -108,10 +131,34 @@ export default async function AdminTaskAssignPage({ searchParams }: PageProps) {
                 <option value="">请选择老师</option>
                 {teachers.map((teacher) => (
                   <option key={teacher.id} value={teacher.id}>
-                    {teacher.name} ({teacher.username})
+                    {teacher.username}
                   </option>
                 ))}
               </select>
+            </label>
+
+            <label className="form-field">
+              <span>仓库文件夹</span>
+              <select name="repoFolder" defaultValue={defaultRepoFolder}>
+                <option value="">仓库根目录</option>
+                {repoFolders
+                  .filter((folder) => folder)
+                  .map((folder) => (
+                    <option key={folder} value={folder}>
+                      {folder}
+                    </option>
+                  ))}
+              </select>
+            </label>
+
+            <label className="form-field">
+              <span>讲义文件名</span>
+              <input
+                name="texFileName"
+                type="text"
+                defaultValue={defaultTexFileName}
+                placeholder="例如：test1.tex"
+              />
             </label>
 
             <div className="form-actions form-field-full">
@@ -137,8 +184,8 @@ export default async function AdminTaskAssignPage({ searchParams }: PageProps) {
               <tr>
                 <th>任务标题</th>
                 <th>讲义</th>
+                <th>仓库文件</th>
                 <th>老师</th>
-                <th>分支名</th>
                 <th>状态</th>
               </tr>
             </thead>
@@ -149,11 +196,11 @@ export default async function AdminTaskAssignPage({ searchParams }: PageProps) {
                   <td>
                     {task.lecture.code} / {task.lecture.title}
                   </td>
+                  <td>{task.lecture.templatePath}</td>
                   <td>
-                    {task.assignee.name} ({task.assignee.username})
+                    {task.assignee.username}
                   </td>
-                  <td>{task.branchName}</td>
-                  <td>{task.status}</td>
+                  <td>{task.lecture.status}</td>
                 </tr>
               ))}
             </tbody>

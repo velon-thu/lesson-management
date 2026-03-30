@@ -66,6 +66,7 @@ export async function submitTaskReviewAction(taskId: string) {
         select: {
           code: true,
           title: true,
+          templatePath: true,
         },
       },
       draft: {
@@ -105,6 +106,7 @@ export async function submitTaskReviewAction(taskId: string) {
     const submission = await submitTaskToGiteaRepo({
       taskId: task.id,
       lectureCode: task.lecture.code,
+      repoFilePath: task.lecture.templatePath,
       branchName: task.branchName || `task/${task.id}`,
       texSource,
       assets: task.assets,
@@ -133,7 +135,7 @@ export async function submitTaskReviewAction(taskId: string) {
           taskId: task.id,
           reviewerId: user.id,
           action: "SUBMIT_FOR_REVIEW",
-          comment: `老师已提交审核，提交分支 ${submission.branchName}，提交 SHA ${submission.commitSha.slice(0, 12)}。`,
+          comment: `老师已提交 ${task.lecture.templatePath} 审核，提交分支 ${submission.branchName}，提交 SHA ${submission.commitSha.slice(0, 12)}。`,
         },
       }),
     ]);
@@ -159,6 +161,7 @@ export async function compilePreviewAction(taskId: string) {
   const result = await compileLatexTask({
     taskId: task.id,
     texSource: task.draft.texSource,
+    entryFilePath: task.lecture.templatePath,
     assets: task.assets.map((asset) => ({
       filePath: asset.filePath,
     })),

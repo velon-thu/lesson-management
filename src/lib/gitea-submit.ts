@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { downloadFromMinio } from "@/lib/minio";
+import { normalizeLectureRepoFilePath } from "@/lib/lecture-repo-path";
 
 type TaskAssetInput = {
   filePath: string;
@@ -11,6 +12,7 @@ type TaskAssetInput = {
 type SubmitTaskToRepoInput = {
   taskId: string;
   lectureCode: string;
+  repoFilePath: string;
   branchName: string;
   texSource: string;
   assets: TaskAssetInput[];
@@ -24,8 +26,8 @@ type SubmitTaskToRepoResult = {
 
 type ReviewDiffResult = {
   diffText: string;
-  branchMainTex: string;
-  mainBranchMainTex: string;
+  branchTexSource: string;
+  mainBranchTexSource: string;
 };
 
 type GiteaConfig = {
@@ -78,22 +80,6 @@ function validateRelativePath(inputPath: string, label: string) {
   }
 
   return normalized;
-}
-
-function validateLectureCode(lectureCode: string) {
-  if (!lectureCode || lectureCode.includes("/") || lectureCode.includes("\\")) {
-    throw new Error("讲义编号不合法，无法写入仓库目录。");
-  }
-
-  return lectureCode;
-}
-
-function getLectureRepoRoot(lectureCode: string) {
-  return `lectures/${validateLectureCode(lectureCode)}`;
-}
-
-function getLectureMainTexPath(lectureCode: string) {
-  return `${getLectureRepoRoot(lectureCode)}/main.tex`;
 }
 
 function runGit(
@@ -190,19 +176,69 @@ async function remoteBranchExists(repoUrl: string, branchName: string, env: Node
   return output.trim().length > 0;
 }
 
+export async function listRepoDirectories() {
+  const runtime = await createGitRuntime();
+
+  try {
+    await cloneDefaultBranch(runtime);
+
+    const output = await runGit(
+      ["ls-tree", "-d", "-r", "--name-only", `origin/${runtime.config.defaultBranch}`],
+      {
+        cwd: runtime.repoDir,
+        env: runtime.gitEnv,
+      }
+    );
+
+    const directories = output
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter((line) => line !== ".git")
+      .sort((a, b) => a.localeCompare(b, "zh-CN"));
+
+    return ["", ...directories];
+  } finally {
+    await rm(runtime.tempRoot, { recursive: true, force: true });
+  }
+}
+
+export async function repoFileExistsInDefaultBranch(repoFilePath: string) {
+  const runtime = await createGitRuntime();
+  const normalizedPath = normalizeLectureRepoFilePath(repoFilePath);
+
+  try {
+    await cloneDefaultBranch(runtime);
+
+    try {
+      await runGit(["cat-file", "-e", `origin/${runtime.config.defaultBranch}:${normalizedPath}`], {
+        cwd: runtime.repoDir,
+        env: runtime.gitEnv,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  } finally {
+    await rm(runtime.tempRoot, { recursive: true, force: true });
+  }
+}
+
 async function writeTaskFilesToRepo(params: {
   repoDir: string;
-  lectureCode: string;
+  taskId: string;
+  repoFilePath: string;
   texSource: string;
   assets: TaskAssetInput[];
 }) {
-  const safeLectureCode = validateLectureCode(params.lectureCode);
-  const lectureRoot = path.join(params.repoDir, "lectures", safeLectureCode);
-  const assetsRoot = path.join(lectureRoot, "assets");
+  const normalizedRepoFilePath = normalizeLectureRepoFilePath(params.repoFilePath);
+  const localTargetPath = path.join(params.repoDir, normalizedRepoFilePath);
+  const localTargetDir = path.dirname(localTargetPath);
+  const taskAssetsRoot = path.join(localTargetDir, "assets", params.taskId);
 
-  await rm(assetsRoot, { recursive: true, force: true });
-  await mkdir(lectureRoot, { recursive: true });
-  await writeFile(path.join(lectureRoot, "main.tex"), params.texSource, "utf8");
+  await rm(taskAssetsRoot, { recursive: true, force: true });
+  await mkdir(localTargetDir, { recursive: true });
+  await writeFile(localTargetPath, params.texSource, "utf8");
 
   for (const asset of params.assets) {
     const relativeAssetPath = validateRelativePath(asset.filePath, "素材");
@@ -212,12 +248,12 @@ async function writeTaskFilesToRepo(params: {
     }
 
     const downloaded = await downloadFromMinio(asset.filePath);
-    const localTargetPath = path.join(lectureRoot, relativeAssetPath);
-    await mkdir(path.dirname(localTargetPath), { recursive: true });
-    await writeFile(localTargetPath, downloaded.body);
+    const localAssetPath = path.join(localTargetDir, relativeAssetPath);
+    await mkdir(path.dirname(localAssetPath), { recursive: true });
+    await writeFile(localAssetPath, downloaded.body);
   }
 
-  return `lectures/${safeLectureCode}`;
+  return normalizedRepoFilePath;
 }
 
 export async function submitTaskToGiteaRepo(
@@ -249,12 +285,13 @@ export async function submitTaskToGiteaRepo(
 
     const contentPath = await writeTaskFilesToRepo({
       repoDir: runtime.repoDir,
-      lectureCode: input.lectureCode,
+      taskId: input.taskId,
+      repoFilePath: input.repoFilePath,
       texSource: input.texSource,
       assets: input.assets,
     });
 
-    await runGit(["add", "-A", "--", contentPath], {
+    await runGit(["add", "-A", "--", "."], {
       cwd: runtime.repoDir,
       env: runtime.gitEnv,
     });
@@ -297,11 +334,11 @@ export async function submitTaskToGiteaRepo(
 }
 
 export async function getTaskMainTexDiff(params: {
-  lectureCode: string;
+  repoFilePath: string;
   branchName: string;
 }): Promise<ReviewDiffResult> {
   const runtime = await createGitRuntime();
-  const mainTexPath = getLectureMainTexPath(params.lectureCode);
+  const repoFilePath = normalizeLectureRepoFilePath(params.repoFilePath);
   const reviewRef = "refs/remotes/origin/__review_branch";
 
   try {
@@ -317,36 +354,36 @@ export async function getTaskMainTexDiff(params: {
           "diff",
           `origin/${runtime.config.defaultBranch}...origin/__review_branch`,
           "--",
-          mainTexPath,
+          repoFilePath,
         ],
         {
           cwd: runtime.repoDir,
           env: runtime.gitEnv,
         }
-      )) || "当前 main.tex 与主分支相比没有差异。";
+      )) || "当前讲义文件与主分支相比没有差异。";
 
-    const mainBranchMainTex = await runGit(
-      ["show", `origin/${runtime.config.defaultBranch}:${mainTexPath}`],
+    const mainBranchTexSource = await runGit(
+      ["show", `origin/${runtime.config.defaultBranch}:${repoFilePath}`],
       {
         cwd: runtime.repoDir,
         env: runtime.gitEnv,
       }
-    ).catch(() => "主分支中暂无该讲义的 main.tex。");
+    ).catch(() => "主分支中暂无该讲义文件。");
 
-    const branchMainTex = await runGit(["show", `origin/${params.branchName}:${mainTexPath}`], {
+    const branchTexSource = await runGit(["show", `origin/${params.branchName}:${repoFilePath}`], {
       cwd: runtime.repoDir,
       env: runtime.gitEnv,
     }).catch(async () => {
-      return runGit(["show", `origin/__review_branch:${mainTexPath}`], {
+      return runGit(["show", `origin/__review_branch:${repoFilePath}`], {
         cwd: runtime.repoDir,
         env: runtime.gitEnv,
-      }).catch(() => "当前任务分支中暂无 main.tex。");
+      }).catch(() => "当前任务分支中暂无该讲义文件。");
     });
 
     return {
       diffText,
-      branchMainTex,
-      mainBranchMainTex,
+      branchTexSource,
+      mainBranchTexSource,
     };
   } catch (error) {
     const message =

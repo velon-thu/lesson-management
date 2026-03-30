@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { TaskStatus } from "@prisma/client";
+import { LectureStatus, TaskStatus } from "@prisma/client";
 import { requireRole } from "@/lib/auth";
 import { mergeTaskBranchToMain } from "@/lib/gitea-submit";
 import { prisma } from "@/lib/prisma";
@@ -92,6 +92,12 @@ export async function handleReviewDecisionAction(taskId: string, formData: FormD
             status: TaskStatus.MERGED,
           },
         }),
+        prisma.lecture.update({
+          where: { id: task.lectureId },
+          data: {
+            status: LectureStatus.DONE,
+          },
+        }),
         prisma.reviewRecord.create({
           data: {
             taskId: task.id,
@@ -106,6 +112,8 @@ export async function handleReviewDecisionAction(taskId: string, formData: FormD
       ]);
 
       revalidatePath("/admin/reviews");
+      revalidatePath("/admin/lectures");
+      revalidatePath("/admin/tasks/assign");
       revalidatePath(`/admin/reviews/${taskId}`);
       revalidatePath(`/teacher/tasks/${taskId}`);
       revalidatePath(`/teacher/tasks/${taskId}/edit`);

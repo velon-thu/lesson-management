@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
+import { getLectureTexFileName } from "@/lib/lecture-repo-path";
 import { getOwnedTeacherTask } from "@/lib/teacher-task";
 import EmptyState from "@/components/empty-state";
 import PageContainer from "@/components/page-container";
@@ -15,12 +16,14 @@ export default async function TeacherTaskDetailPage({ params }: PageProps) {
   const user = await requireRole("teacher");
   const task = await getOwnedTeacherTask(params.taskId, user.id);
   const updatedAt = task.draft?.updatedAt ?? task.updatedAt;
+  const texFileName = getLectureTexFileName(task.lecture.templatePath);
 
   return (
     <PageContainer
       title="任务详情"
-      subtitle="查看任务基础信息、所属讲义、状态与最近更新时间，然后进入编辑页处理 main.tex。"
+      subtitle={`查看任务基础信息、所属讲义、状态与最近更新时间，然后进入编辑页处理 ${texFileName}。`}
       badge="Task Detail"
+      wide
       actions={
         <Link href={`/teacher/tasks/${task.id}/edit`} className="primary-link-button">
           进入编辑页
@@ -33,7 +36,7 @@ export default async function TeacherTaskDetailPage({ params }: PageProps) {
         <div>
           <h2>{task.title}</h2>
           <p>
-            所属讲义：{task.lecture.code} / {task.lecture.title} / {task.lecture.chapter}
+            所属讲义：{task.lecture.code} / {task.lecture.title}
           </p>
         </div>
         <span className="status-pill status-teacher">{task.status}</span>
@@ -73,8 +76,7 @@ export default async function TeacherTaskDetailPage({ params }: PageProps) {
               <strong>{record.action}</strong>
               <p>{record.comment || "暂无意见内容"}</p>
               <span>
-                {record.reviewer.name} ({record.reviewer.username}) /{" "}
-                {record.createdAt.toISOString().replace("T", " ").slice(0, 16)}
+                {record.reviewer.username} / {record.createdAt.toISOString().replace("T", " ").slice(0, 16)}
               </span>
             </div>
           ))}

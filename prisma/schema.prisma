@@ -19,9 +19,9 @@ enum UserRole {
 }
 
 enum LectureStatus {
-  DRAFT
-  ACTIVE
-  ARCHIVED
+  TODO
+  ING
+  DONE
 }
 
 enum TaskStatus {
@@ -39,6 +39,7 @@ model User {
   username       String?        @unique
   email          String         @unique
   passwordHash   String?        @map("password_hash")
+  passwordPlain  String?        @map("password_plain")
   name           String
   role           UserRole
   isActive       Boolean        @default(true) @map("is_active")
@@ -64,7 +65,7 @@ model Lecture {
   description  String?
   deadline     DateTime?
   templatePath String        @map("template_path")
-  status       LectureStatus @default(DRAFT)
+  status       LectureStatus @default(TODO)
   createdById  String        @map("created_by_id")
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")

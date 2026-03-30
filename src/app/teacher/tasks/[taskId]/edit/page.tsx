@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
+import { getLectureTexFileName } from "@/lib/lecture-repo-path";
 import {
   compilePreviewAction,
   saveTaskDraftAction,
@@ -11,14 +12,6 @@ import EmptyState from "@/components/empty-state";
 import PageContainer from "@/components/page-container";
 import SubmitButton from "@/components/submit-button";
 import TeacherSectionNav from "@/components/teacher-section-nav";
-
-const errorMessages: Record<string, string> = {
-  "missing-draft": "当前任务没有可写入的草稿记录。",
-  empty: "main.tex 为空，不能直接提交审核。",
-  "compile-required": "请先确保最近一次编译成功，再提交审核。",
-  file: "请选择要上传的图片文件。",
-  "image-only": "目前仅支持上传图片文件。",
-};
 
 type PageProps = {
   params: {
@@ -38,7 +31,15 @@ export default async function TeacherTaskEditPage({ params, searchParams }: Page
   const compilePreview = compilePreviewAction.bind(null, task.id);
   const submitReview = submitTaskReviewAction.bind(null, task.id);
   const uploadAsset = uploadTaskAssetAction.bind(null, task.id);
+  const texFileName = getLectureTexFileName(task.lecture.templatePath);
   const success = searchParams?.success ?? "";
+  const errorMessages: Record<string, string> = {
+    "missing-draft": "当前任务没有可写入的草稿记录。",
+    empty: `${texFileName} 为空，不能直接提交审核。`,
+    "compile-required": "请先确保最近一次编译成功，再提交审核。",
+    file: "请选择要上传的图片文件。",
+    "image-only": "目前仅支持上传图片文件。",
+  };
   const error = searchParams?.error ? errorMessages[searchParams.error] ?? searchParams.error : "";
   const snippet = searchParams?.snippet ? decodeURIComponent(searchParams.snippet) : "";
   const compileStatus = task.lastCompileStatus ?? "NOT_COMPILED";
@@ -47,9 +48,10 @@ export default async function TeacherTaskEditPage({ params, searchParams }: Page
 
   return (
     <PageContainer
-      title="编辑 main.tex"
+      title={`编辑 ${texFileName}`}
       subtitle="第一版仅提供纯文本 LaTeX 编辑、保存草稿、提交审核和图片上传。"
       badge="Task Editor"
+      wide
       actions={
         <Link href={`/teacher/tasks/${task.id}`} className="secondary-link-button">
           返回任务详情
@@ -90,7 +92,7 @@ export default async function TeacherTaskEditPage({ params, searchParams }: Page
           <section className="form-card">
             <form action={saveDraft} className="editor-form">
               <label className="form-field form-field-full">
-                <span>main.tex</span>
+                <span>{texFileName}</span>
                 <textarea
                   name="texSource"
                   rows={24}
@@ -139,7 +141,7 @@ export default async function TeacherTaskEditPage({ params, searchParams }: Page
           <section className="form-card">
             <div className="section-heading">
               <h3>提交审核</h3>
-              <p>提交前会做基础校验：main.tex 不能为空，且最近一次编译必须成功。</p>
+              <p>提交前会做基础校验：{texFileName} 不能为空，且最近一次编译必须成功。</p>
             </div>
             <form action={submitReview}>
               <SubmitButton
@@ -211,7 +213,7 @@ export default async function TeacherTaskEditPage({ params, searchParams }: Page
                     <strong>{record.action}</strong>
                     <p>{record.comment || "暂无意见内容"}</p>
                     <span>
-                      {record.reviewer.name} ({record.reviewer.username}) /{" "}
+                      {record.reviewer.username} /{" "}
                       {record.createdAt.toISOString().replace("T", " ").slice(0, 16)}
                     </span>
                   </div>

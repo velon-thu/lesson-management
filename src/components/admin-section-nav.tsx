@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const links = [
-  { href: "/admin", label: "工作台" },
   { href: "/admin/lectures", label: "讲义管理" },
   { href: "/admin/teachers", label: "老师列表" },
   { href: "/admin/tasks/assign", label: "任务分配" },
@@ -17,10 +16,7 @@ export default function AdminSectionNav() {
   return (
     <nav className="sub-nav" aria-label="管理员二级导航">
       {links.map((link) => {
-        const active =
-          link.href === "/admin"
-            ? pathname === "/admin"
-            : pathname === link.href || pathname.startsWith(`${link.href}/`);
+        const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
 
         return (
           <Link

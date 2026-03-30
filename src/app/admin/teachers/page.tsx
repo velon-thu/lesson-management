@@ -27,10 +27,12 @@ export default async function AdminTeachersPage() {
   return (
     <PageContainer
       title="老师列表"
-      subtitle="查看当前可分配任务的老师账号，并从这里快速进入任务分配流程。"
-      badge="Teachers"
+      wide
+      hideHeader
     >
-      <AdminSectionNav />
+      <div className="page-header">
+        <AdminSectionNav />
+      </div>
 
       {teachers.length === 0 ? (
         <EmptyState
@@ -43,8 +45,6 @@ export default async function AdminTeachersPage() {
             <thead>
               <tr>
                 <th>用户名</th>
-                <th>姓名</th>
-                <th>邮箱</th>
                 <th>已分配任务</th>
                 <th>操作</th>
               </tr>
@@ -52,9 +52,7 @@ export default async function AdminTeachersPage() {
             <tbody>
               {teachers.map((teacher) => (
                 <tr key={teacher.id}>
-                  <td>{teacher.username}</td>
-                  <td>{teacher.name}</td>
-                  <td>{teacher.email}</td>
+                  <td>{teacher.username || "-"}</td>
                   <td>{teacher._count.assignedTasks}</td>
                   <td>
                     <Link

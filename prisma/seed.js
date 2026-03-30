@@ -18,7 +18,8 @@ async function main() {
       name: "默认管理员",
       role: UserRole.ADMIN,
       isActive: true,
-      passwordHash: hashPassword("admin123456"),
+      passwordHash: hashPassword("admin"),
+      passwordPlain: "admin",
     },
     create: {
       username: "admin",
@@ -26,7 +27,8 @@ async function main() {
       name: "默认管理员",
       role: UserRole.ADMIN,
       isActive: true,
-      passwordHash: hashPassword("admin123456"),
+      passwordHash: hashPassword("admin"),
+      passwordPlain: "admin",
     },
   });
 
@@ -37,7 +39,8 @@ async function main() {
       name: "默认老师",
       role: UserRole.TEACHER,
       isActive: true,
-      passwordHash: hashPassword("teacher123456"),
+      passwordHash: hashPassword("teacher"),
+      passwordPlain: "teacher",
     },
     create: {
       username: "teacher",
@@ -45,7 +48,8 @@ async function main() {
       name: "默认老师",
       role: UserRole.TEACHER,
       isActive: true,
-      passwordHash: hashPassword("teacher123456"),
+      passwordHash: hashPassword("teacher"),
+      passwordPlain: "teacher",
     },
   });
 
@@ -58,7 +62,7 @@ async function main() {
       description: "用于权限验证的管理员讲次",
       deadline: new Date("2026-04-15T00:00:00.000Z"),
       templatePath: "templates/default/main.tex",
-      status: "ACTIVE",
+      status: "ING",
       createdById: admin.id,
     },
     create: {
@@ -69,7 +73,7 @@ async function main() {
       description: "用于权限验证的管理员讲次",
       deadline: new Date("2026-04-15T00:00:00.000Z"),
       templatePath: "templates/default/main.tex",
-      status: "ACTIVE",
+      status: "ING",
       createdById: admin.id,
     },
   });
@@ -83,7 +87,7 @@ async function main() {
       description: "用于权限验证的老师讲次",
       deadline: new Date("2026-04-20T00:00:00.000Z"),
       templatePath: "templates/chapter/main.tex",
-      status: "ACTIVE",
+      status: "ING",
       createdById: admin.id,
     },
     create: {
@@ -94,7 +98,7 @@ async function main() {
       description: "用于权限验证的老师讲次",
       deadline: new Date("2026-04-20T00:00:00.000Z"),
       templatePath: "templates/chapter/main.tex",
-      status: "ACTIVE",
+      status: "ING",
       createdById: admin.id,
     },
   });

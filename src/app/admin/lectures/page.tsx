@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
+import { deleteLectureAction } from "@/app/admin/actions";
 import { prisma } from "@/lib/prisma";
 import AdminSectionNav from "@/components/admin-section-nav";
 import EmptyState from "@/components/empty-state";
@@ -8,6 +9,7 @@ import PageContainer from "@/components/page-container";
 type PageProps = {
   searchParams?: {
     success?: string;
+    error?: string;
   };
 };
 
@@ -16,31 +18,29 @@ export default async function AdminLecturesPage({ searchParams }: PageProps) {
 
   const lectures = await prisma.lecture.findMany({
     orderBy: { createdAt: "desc" },
-    include: {
-      _count: {
-        select: {
-          tasks: true,
-        },
-      },
-    },
   });
 
   return (
     <PageContainer
       title="讲义管理"
-      subtitle="集中查看讲义基础信息，并从这里进入编辑或任务分配流程。"
-      badge="Lectures"
-      actions={
-        <Link href="/admin/lectures/new" className="primary-link-button">
-          新建讲义
-        </Link>
-      }
+      wide
+      hideHeader
     >
-      <AdminSectionNav />
+      <div className="page-header">
+        <AdminSectionNav />
+        <div className="page-actions">
+          <Link href="/admin/lectures/new" className="primary-link-button">
+            新建讲义
+          </Link>
+        </div>
+      </div>
 
       {searchParams?.success ? (
-        <div className="feedback-banner success">讲义已保存。</div>
+        <div className="feedback-banner success">
+          {searchParams.success === "deleted" ? "讲义已删除。" : "讲义已保存。"}
+        </div>
       ) : null}
+      {searchParams?.error ? <div className="feedback-banner error">删除讲义失败。</div> : null}
 
       {lectures.length === 0 ? (
         <EmptyState
@@ -54,11 +54,9 @@ export default async function AdminLecturesPage({ searchParams }: PageProps) {
               <tr>
                 <th>编号</th>
                 <th>标题</th>
-                <th>章节</th>
+                <th>讲义描述</th>
                 <th>截止日期</th>
-                <th>模板路径</th>
                 <th>状态</th>
-                <th>任务数</th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -67,11 +65,9 @@ export default async function AdminLecturesPage({ searchParams }: PageProps) {
                 <tr key={lecture.id}>
                   <td>{lecture.code}</td>
                   <td>{lecture.title}</td>
-                  <td>{lecture.chapter}</td>
+                  <td>{lecture.description?.trim() || "-"}</td>
                   <td>{lecture.deadline ? lecture.deadline.toISOString().slice(0, 10) : "-"}</td>
-                  <td>{lecture.templatePath}</td>
                   <td>{lecture.status}</td>
-                  <td>{lecture._count.tasks}</td>
                   <td>
                     <div className="table-actions">
                       <Link
@@ -86,6 +82,12 @@ export default async function AdminLecturesPage({ searchParams }: PageProps) {
                       >
                         分配
                       </Link>
+                      <form action={deleteLectureAction}>
+                        <input type="hidden" name="lectureId" value={lecture.id} />
+                        <button type="submit" className="secondary-button compact-button">
+                          删除
+                        </button>
+                      </form>
                     </div>
                   </td>
                 </tr>

@@ -25,6 +25,7 @@ export async function hasXelatex() {
 type CompileTaskInput = {
   taskId: string;
   texSource: string;
+  entryFilePath: string;
   assets: Array<{
     filePath: string;
   }>;
@@ -32,11 +33,13 @@ type CompileTaskInput = {
 
 async function prepareCompileDirectory(input: CompileTaskInput) {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), `latex-task-${input.taskId}-`));
-  const mainTexPath = path.join(tempRoot, "main.tex");
-  await writeFile(mainTexPath, input.texSource, "utf8");
+  const entryFilePath = path.join(tempRoot, input.entryFilePath);
+  const entryDir = path.dirname(entryFilePath);
+  await mkdir(entryDir, { recursive: true });
+  await writeFile(entryFilePath, input.texSource, "utf8");
 
   for (const asset of input.assets) {
-    const localAssetPath = path.join(tempRoot, asset.filePath);
+    const localAssetPath = path.join(entryDir, asset.filePath);
     await mkdir(path.dirname(localAssetPath), { recursive: true });
     const downloaded = await downloadFromMinio(asset.filePath);
     await writeFile(localAssetPath, downloaded.body);
@@ -44,7 +47,7 @@ async function prepareCompileDirectory(input: CompileTaskInput) {
 
   return {
     tempRoot,
-    mainTexPath,
+    entryFilePath,
   };
 }
 
@@ -69,7 +72,10 @@ export async function compileLatexTask(input: CompileTaskInput) {
     };
   }
 
-  const { tempRoot } = await prepareCompileDirectory(input);
+  const { tempRoot, entryFilePath } = await prepareCompileDirectory(input);
+  const compileCwd = path.dirname(entryFilePath);
+  const entryFileName = path.basename(entryFilePath);
+  const pdfFileName = `${path.parse(entryFileName).name}.pdf`;
 
   try {
     let output = "";
@@ -77,9 +83,9 @@ export async function compileLatexTask(input: CompileTaskInput) {
     for (let run = 0; run < 2; run += 1) {
       const result = await execFileAsync(
         "xelatex",
-        ["-interaction=nonstopmode", "-halt-on-error", "-file-line-error", "main.tex"],
+        ["-interaction=nonstopmode", "-halt-on-error", "-file-line-error", entryFileName],
         {
-          cwd: tempRoot,
+          cwd: compileCwd,
           timeout: 120000,
           maxBuffer: 10 * 1024 * 1024,
         }
@@ -87,10 +93,10 @@ export async function compileLatexTask(input: CompileTaskInput) {
       output += `${result.stdout}\n${result.stderr}\n`;
     }
 
-    const generatedPdfPath = path.join(tempRoot, "main.pdf");
+    const generatedPdfPath = path.join(compileCwd, pdfFileName);
     await access(generatedPdfPath);
     const pdfBuffer = await readFile(generatedPdfPath);
-    const pdfKey = `compiled-pdfs/${input.taskId}/${Date.now()}-main.pdf`;
+    const pdfKey = `compiled-pdfs/${input.taskId}/${Date.now()}-${pdfFileName}`;
 
     await uploadToMinio({
       key: pdfKey,

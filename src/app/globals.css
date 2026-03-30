@@ -43,6 +43,10 @@ code {
   margin: 0 auto;
 }
 
+.site-shell-wide {
+  width: calc(100% - 32px);
+}
+
 .site-header {
   position: sticky;
   top: 0;
@@ -79,6 +83,7 @@ code {
 .site-header-nav {
   display: flex;
   align-items: center;
+  margin-left: auto;
   gap: 16px;
 }
 
@@ -145,6 +150,11 @@ code {
   box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
 }
 
+.page-panel-wide {
+  min-height: calc(100vh - 152px);
+  align-content: start;
+}
+
 .page-header {
   display: flex;
   align-items: flex-start;
@@ -189,15 +199,25 @@ code {
 .sub-nav {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
 }
 
 .sub-nav-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 44px;
+  flex-shrink: 0;
   padding: 10px 14px;
   border-radius: 999px;
   background: #f8fafc;
   color: #475569;
   border: 1px solid #e2e8f0;
+  line-height: 1;
+  white-space: nowrap;
+  writing-mode: horizontal-tb;
   transition:
     background-color 0.2s ease,
     color 0.2s ease,
@@ -370,10 +390,23 @@ code {
   font-size: 28px;
   font-weight: 700;
   letter-spacing: 0.02em;
+  color: #111827;
   transition:
     transform 0.15s ease,
     box-shadow 0.2s ease,
     border-color 0.2s ease;
+}
+
+.role-card-button {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  text-align: center;
+}
+
+.role-card-wide {
+  grid-column: 1 / -1;
+  min-height: 120px;
 }
 
 .role-card:hover,
@@ -387,6 +420,49 @@ code {
   width: min(520px, 100%);
   display: grid;
   gap: 22px;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.modal-card {
+  width: min(480px, 100%);
+  padding: 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.settings-password-input {
+  width: 100%;
+  min-height: 56px;
+  padding: 16px 18px;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  background: #fff;
+  color: #111827;
+  font-size: 18px;
+}
+
+.settings-password-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
 }
 
 .auth-intro {
@@ -608,6 +684,22 @@ code {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.inline-action-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.inline-action-form input {
+  min-width: 180px;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #111827;
 }
 
 .detail-grid {

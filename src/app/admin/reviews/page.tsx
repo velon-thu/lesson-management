@@ -43,10 +43,12 @@ export default async function AdminReviewsPage() {
   return (
     <PageContainer
       title="审核列表"
-      subtitle="查看当前待审核或被退回修改过的任务，进入单个任务页面进行 PDF 预览、源码差异查看和审核处理。"
-      badge="Reviews"
+      wide
+      hideHeader
     >
-      <AdminSectionNav />
+      <div className="page-header">
+        <AdminSectionNav />
+      </div>
 
       {tasks.length === 0 ? (
         <EmptyState
@@ -59,7 +61,7 @@ export default async function AdminReviewsPage() {
             <thead>
               <tr>
                 <th>讲义名称</th>
-                <th>老师姓名</th>
+                <th>老师账号</th>
                 <th>最新提交时间</th>
                 <th>当前状态</th>
                 <th>最新提交</th>
@@ -76,7 +78,7 @@ export default async function AdminReviewsPage() {
                       {task.lecture.code} / {task.lecture.title}
                     </td>
                     <td>
-                      {task.assignee.name} ({task.assignee.username})
+                      {task.assignee.username}
                     </td>
                     <td>
                       {latestSubmission

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import PageContainer from "@/components/page-container";
 import SubmitButton from "@/components/submit-button";
-import { getCurrentUser, getRedirectPathByRole } from "@/lib/auth";
+import SystemSettingsEntry from "@/components/system-settings-entry";
+import { getCurrentUser } from "@/lib/auth";
 
 const errorMessages: Record<string, string> = {
   "请输入用户名和密码": "请输入用户名和密码",
@@ -12,6 +13,7 @@ type HomePageProps = {
   searchParams?: {
     role?: string;
     error?: string;
+    settingsError?: string;
   };
 };
 
@@ -22,10 +24,11 @@ export default async function Home({ searchParams }: HomePageProps) {
       ? searchParams.role
       : null;
   const error = searchParams?.error ? errorMessages[searchParams.error] ?? "登录失败" : null;
+  const settingsError = searchParams?.settingsError ?? "";
 
   if (user && !selectedRole) {
     return (
-      <PageContainer title="欢迎使用中佳九学讲义管理系统" badge="系统首页">
+      <PageContainer title="欢迎使用中佳九学讲义管理系统">
         <section className="role-grid">
           <Link href="/admin" className="role-card">
             管理员
@@ -33,13 +36,14 @@ export default async function Home({ searchParams }: HomePageProps) {
           <Link href="/teacher" className="role-card">
             老师
           </Link>
+          <SystemSettingsEntry error={settingsError} defaultOpen={Boolean(settingsError)} />
         </section>
       </PageContainer>
     );
   }
 
   return (
-    <PageContainer title="欢迎使用中佳九学讲义管理系统" badge="系统首页" centered>
+    <PageContainer title="欢迎使用中佳九学讲义管理系统" centered>
       {selectedRole ? (
         <div className="auth-layout">
           <section className="auth-card">
@@ -56,23 +60,12 @@ export default async function Home({ searchParams }: HomePageProps) {
                 <span>密码</span>
                 <input name="password" type="password" placeholder="请输入密码" />
               </label>
-              {error ? (
-                <p className="form-error">{error}</p>
-              ) : (
-                <p className="form-hint">请输入账号密码后登录。</p>
-              )}
+              {error ? <p className="form-error">{error}</p> : null}
               <SubmitButton idleText="登录" pendingText="登录中..." className="primary-button" />
             </form>
             <div className="login-hint">
-              <h3>测试账号</h3>
-              <p>
-                管理员：<code>admin / admin123456</code>
-              </p>
-              <p>
-                老师：<code>teacher / teacher123456</code>
-              </p>
               <Link href="/" className="text-link">
-                返回角色选择
+                返回首页登录页面
               </Link>
             </div>
           </section>
@@ -85,6 +78,7 @@ export default async function Home({ searchParams }: HomePageProps) {
           <Link href="/?role=teacher" className="role-card">
             老师
           </Link>
+          <SystemSettingsEntry error={settingsError} defaultOpen={Boolean(settingsError)} />
         </section>
       )}
     </PageContainer>

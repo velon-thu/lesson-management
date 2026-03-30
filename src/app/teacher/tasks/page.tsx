@@ -18,7 +18,6 @@ export default async function TeacherTasksPage() {
         select: {
           code: true,
           title: true,
-          chapter: true,
         },
       },
       draft: {
@@ -34,6 +33,7 @@ export default async function TeacherTasksPage() {
       title="我的任务"
       subtitle="这里只显示系统分配给你的任务。你无法看到其他老师的任务。"
       badge="My Tasks"
+      wide
     >
       <TeacherSectionNav />
 
@@ -62,7 +62,7 @@ export default async function TeacherTasksPage() {
                   <tr key={task.id}>
                     <td>{task.title}</td>
                     <td>
-                      {task.lecture.code} / {task.lecture.title} / {task.lecture.chapter}
+                      {task.lecture.code} / {task.lecture.title}
                     </td>
                     <td>{task.status}</td>
                     <td>{updatedAt.toISOString().replace("T", " ").slice(0, 16)}</td>

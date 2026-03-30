@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { getTaskMainTexDiff } from "@/lib/gitea-submit";
+import { getLectureTexFileName } from "@/lib/lecture-repo-path";
 import { prisma } from "@/lib/prisma";
 import AdminSectionNav from "@/components/admin-section-nav";
 import EmptyState from "@/components/empty-state";
@@ -34,6 +35,7 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
         select: {
           code: true,
           title: true,
+          templatePath: true,
         },
       },
       assignee: {
@@ -70,7 +72,7 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
 
   if (!task) {
     return (
-      <PageContainer title="审核任务不存在" badge="Review">
+    <PageContainer title="审核任务不存在" badge="Review" wide>
         <AdminSectionNav />
         <EmptyState title="未找到审核任务" description="请返回审核列表重新选择任务。" />
       </PageContainer>
@@ -81,21 +83,22 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
   const reviewAction = handleReviewDecisionAction.bind(null, task.id);
   const success = searchParams?.success ?? "";
   const error = searchParams?.error ? errorMessages[searchParams.error] ?? searchParams.error : "";
+  const texFileName = getLectureTexFileName(task.lecture.templatePath);
 
   let diffError = "";
   let diffText = "暂无差异内容。";
-  let branchMainTex = "当前分支暂无 main.tex。";
-  let mainBranchMainTex = "主分支暂无 main.tex。";
+  let branchMainTex = `当前任务分支中暂无 ${texFileName}。`;
+  let mainBranchMainTex = `主分支中暂无 ${texFileName}。`;
 
   if (task.branchName) {
     try {
       const diffResult = await getTaskMainTexDiff({
-        lectureCode: task.lecture.code,
+        repoFilePath: task.lecture.templatePath,
         branchName: task.branchName,
       });
       diffText = diffResult.diffText;
-      branchMainTex = diffResult.branchMainTex;
-      mainBranchMainTex = diffResult.mainBranchMainTex;
+      branchMainTex = diffResult.branchTexSource;
+      mainBranchMainTex = diffResult.mainBranchTexSource;
     } catch (diffLoadError) {
       diffError =
         diffLoadError instanceof Error ? diffLoadError.message : "加载源码差异时发生未知错误。";
@@ -107,6 +110,7 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
       title="任务审核"
       subtitle="左侧查看最新编译 PDF，右侧查看任务与提交信息，下方处理审核意见和分支合并。"
       badge="Review Detail"
+      wide
       actions={
         <Link href="/admin/reviews" className="secondary-link-button">
           返回审核列表
@@ -119,7 +123,7 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
         <div>
           <h2>{task.title}</h2>
           <p>
-            {task.lecture.code} / {task.lecture.title} / {task.assignee.name}（{task.assignee.username}）
+            {task.lecture.code} / {task.lecture.title} / {task.assignee.username}
           </p>
         </div>
         <span className="status-pill status-admin">{task.status}</span>
@@ -166,9 +170,9 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
               <p>{task.lecture.code}</p>
             </article>
             <article className="detail-card">
-              <h3>老师姓名</h3>
+              <h3>老师账号</h3>
               <p>
-                {task.assignee.name} ({task.assignee.username})
+                {task.assignee.username}
               </p>
             </article>
             <article className="detail-card">
@@ -192,8 +196,8 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
               </p>
             </article>
             <article className="detail-card">
-              <h3>仓库路径</h3>
-              <p>{latestSubmission?.contentPath ?? "暂无"}</p>
+              <h3>讲义文件</h3>
+              <p>{task.lecture.templatePath}</p>
             </article>
           </section>
 
@@ -245,8 +249,7 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
                     <strong>{record.action}</strong>
                     <p>{record.comment || "暂无意见内容"}</p>
                     <span>
-                      {record.reviewer.name} ({record.reviewer.username}) /{" "}
-                      {record.createdAt.toISOString().replace("T", " ").slice(0, 16)}
+                      {record.reviewer.username} / {record.createdAt.toISOString().replace("T", " ").slice(0, 16)}
                     </span>
                   </div>
                 ))}
@@ -259,8 +262,8 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
       <section className="review-diff-grid">
         <section className="form-card">
           <div className="section-heading">
-            <h3>main.tex 差异</h3>
-            <p>对比当前任务分支与主分支对应 `main.tex` 的源码差异。</p>
+            <h3>{texFileName} 差异</h3>
+            <p>对比当前任务分支与主分支对应 `{texFileName}` 的源码差异。</p>
           </div>
           {diffError ? (
             <div className="feedback-banner error">{diffError}</div>
@@ -274,7 +277,7 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
         <section className="detail-grid">
           <article className="form-card">
             <div className="section-heading">
-              <h3>当前任务分支 main.tex</h3>
+              <h3>当前任务分支 {texFileName}</h3>
             </div>
             <div className="log-box">
               <pre>{branchMainTex}</pre>
@@ -283,7 +286,7 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
 
           <article className="form-card">
             <div className="section-heading">
-              <h3>主分支 main.tex</h3>
+              <h3>主分支 {texFileName}</h3>
             </div>
             <div className="log-box">
               <pre>{mainBranchMainTex}</pre>

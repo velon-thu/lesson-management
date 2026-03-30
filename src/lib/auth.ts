@@ -30,7 +30,7 @@ function toAppRole(role: UserRole): AppRole {
 }
 
 export function getRedirectPathByRole(role: AppRole) {
-  return role === "admin" ? "/admin" : "/teacher";
+  return role === "admin" ? "/admin/lectures" : "/teacher/tasks";
 }
 
 function signPayload(payload: string) {

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { LectureStatus } from "@prisma/client";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { saveLectureAction } from "@/app/admin/actions";
@@ -26,18 +25,20 @@ export default async function AdminLectureFormPage({ searchParams }: PageProps) 
   return (
     <PageContainer
       title={lecture ? "编辑讲义" : "新建讲义"}
-      subtitle="录入讲义基础信息，保存后即可在讲义列表里查看或继续分配任务。"
-      badge="Lecture Form"
-      actions={
-        <Link href="/admin/lectures" className="secondary-link-button">
-          返回列表
-        </Link>
-      }
+      wide
+      hideHeader
     >
-      <AdminSectionNav />
+      <div className="page-header">
+        <AdminSectionNav />
+        <div className="page-actions">
+          <Link href="/admin/lectures" className="secondary-link-button">
+            返回列表
+          </Link>
+        </div>
+      </div>
 
       {searchParams?.error ? (
-        <div className="feedback-banner error">请完整填写编号、标题、章节和模板路径。</div>
+        <div className="feedback-banner error">请完整填写讲义编号和讲义标题。</div>
       ) : null}
 
       <section className="form-card">
@@ -65,16 +66,6 @@ export default async function AdminLectureFormPage({ searchParams }: PageProps) 
           </label>
 
           <label className="form-field">
-            <span>章节 chapter</span>
-            <input
-              name="chapter"
-              type="text"
-              defaultValue={lecture?.chapter ?? ""}
-              placeholder="例如：函数基础"
-            />
-          </label>
-
-          <label className="form-field">
             <span>截止日期 deadline</span>
             <input
               name="deadline"
@@ -84,32 +75,13 @@ export default async function AdminLectureFormPage({ searchParams }: PageProps) 
           </label>
 
           <label className="form-field form-field-full">
-            <span>模板路径 templatePath</span>
-            <input
-              name="templatePath"
-              type="text"
-              defaultValue={lecture?.templatePath ?? ""}
-              placeholder="例如：templates/chapter/main.tex"
-            />
-          </label>
-
-          <label className="form-field form-field-full">
-            <span>描述 description</span>
+            <span>讲义描述 description</span>
             <textarea
               name="description"
               rows={4}
               defaultValue={lecture?.description ?? ""}
               placeholder="简要描述本讲义内容"
             />
-          </label>
-
-          <label className="form-field">
-            <span>状态 status</span>
-            <select name="status" defaultValue={lecture?.status ?? LectureStatus.DRAFT}>
-              <option value={LectureStatus.DRAFT}>DRAFT</option>
-              <option value={LectureStatus.ACTIVE}>ACTIVE</option>
-              <option value={LectureStatus.ARCHIVED}>ARCHIVED</option>
-            </select>
           </label>
 
           <div className="form-actions form-field-full">
