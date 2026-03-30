@@ -23,8 +23,12 @@ export default function TeacherEditorWorkspace({
   const highlightRef = useRef<HTMLPreElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [leftWidth, setLeftWidth] = useState(58);
-  const [editorFontSize, setEditorFontSize] = useState(32);
+  const [editorFontSize, setEditorFontSize] = useState(20);
   const [editorValue, setEditorValue] = useState(texSource);
+
+  useEffect(() => {
+    setEditorValue(texSource);
+  }, [texSource]);
 
   useEffect(() => {
     function handleMouseMove(event: MouseEvent) {
