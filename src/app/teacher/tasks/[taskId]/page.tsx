@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
-import { getLectureTexFileName } from "@/lib/lecture-repo-path";
+import { getLectureTexFileName, getLectureRepoFolder } from "@/lib/lecture-repo-path";
 import { getOwnedTeacherTask } from "@/lib/teacher-task";
 import EmptyState from "@/components/empty-state";
 import PageContainer from "@/components/page-container";
-import TeacherSectionNav from "@/components/teacher-section-nav";
 
 type PageProps = {
   params: {
@@ -17,21 +16,19 @@ export default async function TeacherTaskDetailPage({ params }: PageProps) {
   const task = await getOwnedTeacherTask(params.taskId, user.id);
   const updatedAt = task.draft?.updatedAt ?? task.updatedAt;
   const texFileName = getLectureTexFileName(task.lecture.templatePath);
+  const repoFolder = getLectureRepoFolder(task.lecture.templatePath);
 
   return (
     <PageContainer
       title="任务详情"
-      subtitle={`查看任务基础信息、所属讲义、状态与最近更新时间，然后进入编辑页处理 ${texFileName}。`}
       badge="Task Detail"
       wide
       actions={
-        <Link href={`/teacher/tasks/${task.id}/edit`} className="primary-link-button">
-          进入编辑页
+        <Link href="/teacher/tasks" className="secondary-link-button">
+          返回任务列表
         </Link>
       }
     >
-      <TeacherSectionNav />
-
       <section className="summary-banner">
         <div>
           <h2>{task.title}</h2>
@@ -39,7 +36,7 @@ export default async function TeacherTaskDetailPage({ params }: PageProps) {
             所属讲义：{task.lecture.code} / {task.lecture.title}
           </p>
         </div>
-        <span className="status-pill status-teacher">{task.status}</span>
+        <span className="status-pill status-teacher">{texFileName}</span>
       </section>
 
       <section className="detail-grid">
@@ -54,8 +51,16 @@ export default async function TeacherTaskDetailPage({ params }: PageProps) {
           </p>
         </article>
         <article className="detail-card">
-          <h3>当前状态</h3>
-          <p>{task.status}</p>
+          <h3>讲义文件</h3>
+          <p>{task.lecture.templatePath}</p>
+        </article>
+        <article className="detail-card">
+          <h3>所在文件夹</h3>
+          <p>{repoFolder || "仓库根目录"}</p>
+        </article>
+        <article className="detail-card">
+          <h3>讲义描述</h3>
+          <p>{task.lecture.description?.trim() || "暂无讲义描述"}</p>
         </article>
         <article className="detail-card">
           <h3>最近更新时间</h3>

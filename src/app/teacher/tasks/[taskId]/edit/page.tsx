@@ -11,7 +11,6 @@ import { getOwnedTeacherTask } from "@/lib/teacher-task";
 import EmptyState from "@/components/empty-state";
 import PageContainer from "@/components/page-container";
 import SubmitButton from "@/components/submit-button";
-import TeacherSectionNav from "@/components/teacher-section-nav";
 
 type PageProps = {
   params: {
@@ -58,8 +57,6 @@ export default async function TeacherTaskEditPage({ params, searchParams }: Page
         </Link>
       }
     >
-      <TeacherSectionNav />
-
       <section className="summary-banner">
         <div>
           <h2>{task.title}</h2>
