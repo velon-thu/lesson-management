@@ -11,6 +11,7 @@ import { getOwnedTeacherTask } from "@/lib/teacher-task";
 import EmptyState from "@/components/empty-state";
 import PageContainer from "@/components/page-container";
 import SubmitButton from "@/components/submit-button";
+import TeacherEditorWorkspace from "@/components/teacher-editor-workspace";
 
 type PageProps = {
   params: {
@@ -48,7 +49,6 @@ export default async function TeacherTaskEditPage({ params, searchParams }: Page
   return (
     <PageContainer
       title={`编辑 ${texFileName}`}
-      subtitle="第一版仅提供纯文本 LaTeX 编辑、保存草稿、提交审核和图片上传。"
       badge="Task Editor"
       wide
       actions={
@@ -64,7 +64,7 @@ export default async function TeacherTaskEditPage({ params, searchParams }: Page
             所属讲义：{task.lecture.code} / {task.lecture.title}
           </p>
         </div>
-        <span className="status-pill status-teacher">{task.status}</span>
+        <span className="status-pill status-teacher">{task.lecture.status}</span>
       </section>
 
       {success === "saved" ? (
@@ -84,30 +84,15 @@ export default async function TeacherTaskEditPage({ params, searchParams }: Page
       ) : null}
       {error ? <div className="feedback-banner error">{error}</div> : null}
 
-      <section className="editor-layout">
-        <div className="editor-main">
-          <section className="form-card">
-            <form action={saveDraft} className="editor-form">
-              <label className="form-field form-field-full">
-                <span>{texFileName}</span>
-                <textarea
-                  name="texSource"
-                  rows={24}
-                  defaultValue={task.draft?.texSource ?? ""}
-                  className="editor-textarea"
-                />
-              </label>
-              <div className="form-actions">
-                <SubmitButton
-                  idleText="保存草稿"
-                  pendingText="保存中..."
-                  className="primary-button"
-                />
-              </div>
-            </form>
-          </section>
+      <TeacherEditorWorkspace
+        texFileName={texFileName}
+        texSource={task.draft?.texSource ?? ""}
+        pdfUrl={task.lastCompileStatus === "SUCCESS" && task.lastPdfPath ? `/api/teacher/tasks/${task.id}/pdf` : null}
+        saveAction={saveDraft}
+      />
 
-          <section className="form-card">
+      <section className="editor-bottom-grid">
+        <section className="form-card">
             <div className="section-heading">
               <h3>编译预览</h3>
               <p>固定使用 xelatex，在隔离临时目录中编译，不开启 shell-escape。</p>
@@ -133,9 +118,9 @@ export default async function TeacherTaskEditPage({ params, searchParams }: Page
                 className="secondary-button"
               />
             </form>
-          </section>
+        </section>
 
-          <section className="form-card">
+        <section className="form-card">
             <div className="section-heading">
               <h3>提交审核</h3>
               <p>提交前会做基础校验：{texFileName} 不能为空，且最近一次编译必须成功。</p>
@@ -147,11 +132,9 @@ export default async function TeacherTaskEditPage({ params, searchParams }: Page
                 className="secondary-button"
               />
             </form>
-          </section>
-        </div>
+        </section>
 
-        <aside className="editor-sidebar">
-          <section className="form-card">
+        <section className="form-card">
             <div className="section-heading">
               <h3>上传图片</h3>
               <p>上传成功后会记录到 `assets` 表，并生成可复制的 LaTeX 引用片段。</p>
@@ -174,27 +157,9 @@ export default async function TeacherTaskEditPage({ params, searchParams }: Page
                 <textarea readOnly rows={4} value={snippet} />
               </div>
             ) : null}
-          </section>
+        </section>
 
-          <section className="form-card">
-            <div className="section-heading">
-              <h3>PDF 预览</h3>
-            </div>
-            {task.lastCompileStatus === "SUCCESS" && task.lastPdfPath ? (
-              <iframe
-                title="PDF 预览"
-                src={`/api/teacher/tasks/${task.id}/pdf`}
-                className="pdf-preview-frame"
-              />
-            ) : (
-              <EmptyState
-                title="暂无可预览 PDF"
-                description="请先完成一次成功编译，之后这里会显示最新 PDF。"
-              />
-            )}
-          </section>
-
-          <section className="form-card">
+        <section className="form-card">
             <div className="section-heading">
               <h3>最近审核意见</h3>
             </div>
@@ -217,9 +182,9 @@ export default async function TeacherTaskEditPage({ params, searchParams }: Page
                 ))}
               </div>
             )}
-          </section>
+        </section>
 
-          <section className="form-card">
+        <section className="form-card">
             <div className="section-heading">
               <h3>编译日志</h3>
             </div>
@@ -233,9 +198,9 @@ export default async function TeacherTaskEditPage({ params, searchParams }: Page
                 description="首次编译后，这里会显示最近一次编译的输出日志。"
               />
             )}
-          </section>
+        </section>
 
-          <section className="form-card">
+        <section className="form-card">
             <div className="section-heading">
               <h3>已上传素材</h3>
             </div>
@@ -255,8 +220,7 @@ export default async function TeacherTaskEditPage({ params, searchParams }: Page
                 ))}
               </div>
             )}
-          </section>
-        </aside>
+        </section>
       </section>
     </PageContainer>
   );
