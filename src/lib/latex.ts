@@ -128,3 +128,51 @@ export async function compileLatexTask(input: CompileTaskInput) {
     await rm(tempRoot, { recursive: true, force: true });
   }
 }
+
+/**
+ * 在一个已经准备好的目录中直接用 xelatex 编译，返回 PDF 内容（Buffer）。
+ * 与 compileLatexTask 不同：不下载素材、不上传 MinIO，由调用方自行准备工作目录
+ * （组合下载、修改已完成讲义都在 Gitea 仓库克隆目录中编译，素材就在原位）。
+ */
+export async function compileLatexInDirectory(params: {
+  cwd: string;
+  entryFileName: string;
+}): Promise<{ ok: boolean; log: string; pdf: Buffer | null }> {
+  if (!(await hasXelatex())) {
+    return { ok: false, log: buildMissingXelatexLog(), pdf: null };
+  }
+
+  const pdfFileName = `${path.parse(params.entryFileName).name}.pdf`;
+
+  try {
+    let output = "";
+
+    for (let run = 0; run < 2; run += 1) {
+      const result = await execFileAsync(
+        "xelatex",
+        ["-interaction=nonstopmode", "-halt-on-error", "-file-line-error", params.entryFileName],
+        {
+          cwd: params.cwd,
+          timeout: 120000,
+          maxBuffer: 10 * 1024 * 1024,
+        }
+      );
+      output += `${result.stdout}\n${result.stderr}\n`;
+    }
+
+    const generatedPdfPath = path.join(params.cwd, pdfFileName);
+    await access(generatedPdfPath);
+    const pdf = await readFile(generatedPdfPath);
+
+    return { ok: true, log: output.trim() || "编译成功。", pdf };
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? [error.message, "stdout" in error ? String(error.stdout ?? "") : "", "stderr" in error ? String(error.stderr ?? "") : ""]
+            .filter(Boolean)
+            .join("\n")
+        : "未知编译错误";
+
+    return { ok: false, log: message, pdf: null };
+  }
+}

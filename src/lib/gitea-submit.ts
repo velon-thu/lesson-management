@@ -1,8 +1,10 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { downloadFromMinio } from "@/lib/minio";
+import { compileLatexInDirectory } from "@/lib/latex";
+import { mergeLatexSources } from "@/lib/latex-merge";
 import { normalizeLectureRepoFilePath } from "@/lib/lecture-repo-path";
 
 type TaskAssetInput = {
@@ -510,5 +512,144 @@ export async function mergeTaskBranchToMain(params: {
   } catch (error) {
     const message = error instanceof Error ? sanitizeGitMessage(error.message, config) : "合并分支失败";
     throw new Error(message);
+  }
+}
+
+/** 读取仓库默认分支上某个讲义文件的当前源码。 */
+export async function readRepoFileFromDefaultBranch(repoFilePath: string): Promise<string> {
+  const runtime = await createGitRuntime();
+  const normalized = normalizeLectureRepoFilePath(repoFilePath);
+
+  try {
+    await cloneDefaultBranch(runtime);
+
+    return await runGit(["show", `origin/${runtime.config.defaultBranch}:${normalized}`], {
+      cwd: runtime.repoDir,
+      env: runtime.gitEnv,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? sanitizeGitMessage(error.message, runtime.config) : "读取讲义源码失败";
+    throw new Error(message);
+  } finally {
+    await rm(runtime.tempRoot, { recursive: true, force: true });
+  }
+}
+
+/**
+ * 把多份已完成讲义合并并编译成一个 PDF。
+ * 在仓库克隆目录里编译，素材文件随仓库一起就位，\graphicspath 负责定位。
+ */
+export async function combineLecturesPdf(
+  lectures: Array<{ code: string; title: string; templatePath: string }>
+): Promise<Buffer> {
+  if (lectures.length === 0) {
+    throw new Error("请至少选择一份已完成讲义。");
+  }
+
+  const runtime = await createGitRuntime();
+
+  try {
+    await cloneDefaultBranch(runtime);
+
+    const items = [];
+
+    for (const lecture of lectures) {
+      const normalized = normalizeLectureRepoFilePath(lecture.templatePath);
+      let source: string;
+
+      try {
+        source = await readFile(path.join(runtime.repoDir, normalized), "utf8");
+      } catch {
+        throw new Error(`讲义「${lecture.code} / ${lecture.title}」在仓库主分支中找不到源文件。`);
+      }
+
+      const dir = path.posix.dirname(normalized);
+      items.push({
+        title: `${lecture.code} ${lecture.title}`,
+        source,
+        graphicsDir: dir === "." ? "" : dir,
+      });
+    }
+
+    const entryFileName = `_combined_${Date.now()}.tex`;
+    await writeFile(path.join(runtime.repoDir, entryFileName), mergeLatexSources(items), "utf8");
+
+    const result = await compileLatexInDirectory({ cwd: runtime.repoDir, entryFileName });
+
+    if (!result.ok || !result.pdf) {
+      throw new Error(`组合讲义编译失败：\n${result.log}`);
+    }
+
+    return result.pdf;
+  } finally {
+    await rm(runtime.tempRoot, { recursive: true, force: true });
+  }
+}
+
+/**
+ * 修改已完成讲义并轻量提交：在克隆目录里覆盖源文件、先编译校验，
+ * 编译通过才直接提交到默认分支（不走任务/审核流程）。
+ */
+export async function reviseLectureOnMain(params: {
+  templatePath: string;
+  content: string;
+}): Promise<{ ok: boolean; log: string }> {
+  const runtime = await createGitRuntime();
+  const normalized = normalizeLectureRepoFilePath(params.templatePath);
+
+  try {
+    await cloneDefaultBranch(runtime);
+
+    const absPath = path.join(runtime.repoDir, normalized);
+    await mkdir(path.dirname(absPath), { recursive: true });
+    await writeFile(absPath, params.content, "utf8");
+
+    const compileResult = await compileLatexInDirectory({
+      cwd: path.dirname(absPath),
+      entryFileName: path.basename(normalized),
+    });
+
+    if (!compileResult.ok) {
+      return { ok: false, log: compileResult.log };
+    }
+
+    // 仅暂存讲义源文件本身，避免把编译产物（pdf/aux/log）提交进仓库。
+    await runGit(["add", "--", normalized], {
+      cwd: runtime.repoDir,
+      env: runtime.gitEnv,
+    });
+
+    let hasChanges = true;
+    try {
+      await runGit(["diff", "--cached", "--quiet"], {
+        cwd: runtime.repoDir,
+        env: runtime.gitEnv,
+      });
+      hasChanges = false;
+    } catch {
+      hasChanges = true;
+    }
+
+    if (!hasChanges) {
+      return { ok: true, log: "讲义内容没有变化，无需提交。" };
+    }
+
+    await runGit(["commit", "-m", `Revise lecture ${normalized}`], {
+      cwd: runtime.repoDir,
+      env: runtime.gitEnv,
+    });
+    await runGit(["push", "origin", `HEAD:${runtime.config.defaultBranch}`], {
+      cwd: runtime.repoDir,
+      env: runtime.gitEnv,
+    });
+
+    return { ok: true, log: compileResult.log };
+  } catch (error) {
+    const message =
+      error instanceof Error ? sanitizeGitMessage(error.message, runtime.config) : "发布修改失败";
+    throw new Error(message);
+  } finally {
+    await rm(runtime.tempRoot, { recursive: true, force: true });
   }
 }

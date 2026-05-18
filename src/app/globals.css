@@ -1221,6 +1221,51 @@ code {
   word-break: break-word;
 }
 
+/* ===== 讲义管理分区 ===== */
+.lecture-block {
+  display: grid;
+  gap: 14px;
+}
+
+.block-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.block-title h2 {
+  font-size: 20px;
+  letter-spacing: -0.01em;
+  color: var(--ink-900);
+}
+
+.count-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--r-pill);
+  background: var(--brand-100);
+  color: var(--brand-700);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.combine-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.data-table input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand-600);
+  cursor: pointer;
+}
+
 @media (max-width: 900px) {
   .site-header-inner,
   .page-header,
