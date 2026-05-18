@@ -1,31 +1,26 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { readRepoFileFromDefaultBranch } from "@/lib/gitea-submit";
-import { getLectureTexFileName } from "@/lib/lecture-repo-path";
-import { prisma } from "@/lib/prisma";
+import { getLectureTexFileName, normalizeLectureRepoFilePath } from "@/lib/lecture-repo-path";
 import LectureReviseEditor from "@/components/lecture-revise-editor";
 import PageContainer from "@/components/page-container";
 
 type PageProps = {
-  params: {
-    lectureId: string;
+  searchParams?: {
+    path?: string;
   };
 };
 
-export default async function AdminLectureRevisePage({ params }: PageProps) {
+export default async function AdminLectureRevisePage({ searchParams }: PageProps) {
   await requireRole("admin");
 
-  const lecture = await prisma.lecture.findUnique({
-    where: { id: params.lectureId },
-    select: { id: true, code: true, title: true, status: true, templatePath: true },
-  });
+  const rawPath = searchParams?.path?.trim() ?? "";
+  let safePath = "";
 
-  if (!lecture) {
-    notFound();
-  }
-
-  if (lecture.status !== "DONE") {
+  try {
+    safePath = normalizeLectureRepoFilePath(rawPath);
+  } catch {
     redirect("/admin/lectures");
   }
 
@@ -33,16 +28,16 @@ export default async function AdminLectureRevisePage({ params }: PageProps) {
   let loadError = "";
 
   try {
-    initialSource = await readRepoFileFromDefaultBranch(lecture.templatePath);
+    initialSource = await readRepoFileFromDefaultBranch(safePath);
   } catch (error) {
     loadError = error instanceof Error ? error.message : "无法读取讲义源码。";
   }
 
-  const texFileName = getLectureTexFileName(lecture.templatePath);
+  const texFileName = getLectureTexFileName(safePath);
 
   return (
     <PageContainer
-      title={`修改讲义 ${lecture.code}`}
+      title={`修改讲义 ${texFileName}`}
       badge="Revise"
       wide
       actions={
@@ -53,14 +48,14 @@ export default async function AdminLectureRevisePage({ params }: PageProps) {
     >
       <section className="summary-banner">
         <div>
-          <h2>{lecture.title}</h2>
-          <p>讲义编号：{lecture.code}</p>
+          <h2>{texFileName}</h2>
+          <p>仓库路径：{safePath}</p>
         </div>
-        <span className="status-pill status-admin">{lecture.status}</span>
+        <span className="status-pill status-admin">已有讲义</span>
       </section>
 
       <LectureReviseEditor
-        lectureId={lecture.id}
+        lecturePath={safePath}
         texFileName={texFileName}
         initialSource={initialSource}
         loadError={loadError}

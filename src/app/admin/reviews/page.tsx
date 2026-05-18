@@ -19,7 +19,6 @@ export default async function AdminReviewsPage() {
     include: {
       lecture: {
         select: {
-          code: true,
           title: true,
         },
       },
@@ -74,9 +73,7 @@ export default async function AdminReviewsPage() {
 
                 return (
                   <tr key={task.id}>
-                    <td>
-                      {task.lecture.code} / {task.lecture.title}
-                    </td>
+                    <td>{task.lecture.title}</td>
                     <td>
                       {task.assignee.username}
                     </td>

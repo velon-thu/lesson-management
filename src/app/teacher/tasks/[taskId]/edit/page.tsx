@@ -54,9 +54,7 @@ export default async function TeacherTaskEditPage({ params, searchParams }: Page
       <section className="summary-banner">
         <div>
           <h2>{task.title}</h2>
-          <p>
-            所属讲义：{task.lecture.code} / {task.lecture.title}
-          </p>
+          <p>所属讲义：{task.lecture.title}</p>
         </div>
         <span className="status-pill status-teacher">{task.lecture.status}</span>
       </section>

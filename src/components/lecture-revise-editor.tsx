@@ -52,14 +52,14 @@ type PublishResult = {
 };
 
 type LectureReviseEditorProps = {
-  lectureId: string;
+  lecturePath: string;
   texFileName: string;
   initialSource: string;
   loadError?: string;
 };
 
 export default function LectureReviseEditor({
-  lectureId,
+  lecturePath,
   texFileName,
   initialSource,
   loadError = "",
@@ -103,10 +103,10 @@ export default function LectureReviseEditor({
     setResult(null);
 
     try {
-      const response = await fetch(`/api/admin/lectures/${lectureId}/compile-preview`, {
+      const response = await fetch("/api/admin/lectures/compile-preview", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ texSource: view.state.doc.toString() }),
+        body: JSON.stringify({ path: lecturePath, texSource: view.state.doc.toString() }),
       });
 
       const data = await response.json();
@@ -137,10 +137,10 @@ export default function LectureReviseEditor({
     setResult(null);
 
     try {
-      const response = await fetch(`/api/admin/lectures/${lectureId}/revise`, {
+      const response = await fetch("/api/admin/lectures/revise", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ texSource: view.state.doc.toString() }),
+        body: JSON.stringify({ path: lecturePath, texSource: view.state.doc.toString() }),
       });
 
       const data = await response.json();

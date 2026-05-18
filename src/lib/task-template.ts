@@ -1,5 +1,4 @@
 type LectureTemplateInput = {
-  code: string;
   title: string;
   description: string | null;
   templatePath: string;
@@ -27,9 +26,6 @@ export function buildInitialTexSource({ taskId, teacherName, lecture }: TaskTemp
     "",
     "\\begin{document}",
     "\\maketitle",
-    "",
-    `\\section*{讲义编号}`,
-    lecture.code,
     "",
     `\\section*{说明}`,
     description,

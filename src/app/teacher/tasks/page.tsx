@@ -15,7 +15,6 @@ export default async function TeacherTasksPage() {
     include: {
       lecture: {
         select: {
-          code: true,
           title: true,
         },
       },
@@ -56,9 +55,7 @@ export default async function TeacherTasksPage() {
                 return (
                   <tr key={task.id}>
                     <td>{task.title}</td>
-                    <td>
-                      {task.lecture.code} / {task.lecture.title}
-                    </td>
+                    <td>{task.lecture.title}</td>
                     <td>{updatedAt.toISOString().replace("T", " ").slice(0, 16)}</td>
                     <td>
                       <div className="table-actions">

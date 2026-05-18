@@ -59,7 +59,6 @@ model User {
 
 model Lecture {
   id           String        @id @default(cuid())
-  code         String        @unique
   title        String
   chapter      String
   description  String?

@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { deleteLectureAction } from "@/app/admin/actions";
+import { listRepoLectureFiles } from "@/lib/gitea-submit";
 import { prisma } from "@/lib/prisma";
 import AdminSectionNav from "@/components/admin-section-nav";
 import EmptyState from "@/components/empty-state";
+import LectureTree from "@/components/lecture-tree";
 import PageContainer from "@/components/page-container";
 
 type PageProps = {
@@ -16,11 +18,19 @@ type PageProps = {
 export default async function AdminLecturesPage({ searchParams }: PageProps) {
   await requireRole("admin");
 
-  const lectures = await prisma.lecture.findMany({
+  const activeLectures = await prisma.lecture.findMany({
+    where: { status: { not: "DONE" } },
     orderBy: { createdAt: "desc" },
   });
-  const doneLectures = lectures.filter((lecture) => lecture.status === "DONE");
-  const activeLectures = lectures.filter((lecture) => lecture.status !== "DONE");
+
+  let lectureFiles: string[] = [];
+  let repoError = "";
+
+  try {
+    lectureFiles = await listRepoLectureFiles();
+  } catch (error) {
+    repoError = error instanceof Error ? error.message : "无法读取 Gitea 仓库的讲义列表。";
+  }
 
   const successText = searchParams?.success
     ? searchParams.success === "deleted"
@@ -62,7 +72,6 @@ export default async function AdminLecturesPage({ searchParams }: PageProps) {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>编号</th>
                   <th>标题</th>
                   <th>讲义描述</th>
                   <th>截止日期</th>
@@ -73,7 +82,6 @@ export default async function AdminLecturesPage({ searchParams }: PageProps) {
               <tbody>
                 {activeLectures.map((lecture) => (
                   <tr key={lecture.id}>
-                    <td>{lecture.code}</td>
                     <td>{lecture.title}</td>
                     <td>{lecture.description?.trim() || "-"}</td>
                     <td>{lecture.deadline ? lecture.deadline.toISOString().slice(0, 10) : "-"}</td>
@@ -110,52 +118,25 @@ export default async function AdminLecturesPage({ searchParams }: PageProps) {
 
       <div className="lecture-block">
         <div className="block-title">
-          <h2>已完成讲义</h2>
-          <span className="count-pill">{doneLectures.length}</span>
+          <h2>已有讲义</h2>
+          <span className="count-pill">{lectureFiles.length}</span>
         </div>
-        {doneLectures.length === 0 ? (
+        <p className="form-hint">来源为 Gitea 仓库主分支，按文件夹层级展示。</p>
+        {repoError ? (
+          <div className="feedback-banner error">{repoError}</div>
+        ) : lectureFiles.length === 0 ? (
           <EmptyState
-            title="暂无已完成讲义"
-            description="讲义任务通过审核并合并到主分支后，会出现在这里。"
+            title="仓库中暂无讲义"
+            description="讲义任务通过审核合并、或仓库里有 .tex 文件后，会出现在这里。"
           />
         ) : (
           <form method="get" action="/api/admin/lectures/combine">
             <div className="table-card">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>选择</th>
-                    <th>编号</th>
-                    <th>标题</th>
-                    <th>仓库文件</th>
-                    <th>操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {doneLectures.map((lecture) => (
-                    <tr key={lecture.id}>
-                      <td>
-                        <input type="checkbox" name="lectureId" value={lecture.id} />
-                      </td>
-                      <td>{lecture.code}</td>
-                      <td>{lecture.title}</td>
-                      <td>{lecture.templatePath}</td>
-                      <td>
-                        <Link
-                          href={`/admin/lectures/${lecture.id}/revise`}
-                          className="secondary-link-button compact-button"
-                        >
-                          修改
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <LectureTree files={lectureFiles} />
             </div>
             <div className="combine-bar">
               <span className="editor-action-hint">
-                勾选多份已完成讲义，组合编译成一个 PDF 下载。
+                勾选多份讲义，组合编译成一个 PDF 下载。
               </span>
               <button type="submit" className="primary-button">
                 组合下载 PDF

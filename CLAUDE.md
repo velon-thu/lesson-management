@@ -57,6 +57,8 @@ Next.js 14 App Router(TypeScript、React 18)。路径别名 `@/*` → `src/*`。
 
 注意:`Lecture.templatePath` 一词多义 —— 它存的是该讲次在仓库内的*目标 `.tex` 路径*(例如 `chapter1/main.tex`),并非模板文件。仓库路径的安全校验统一走 `lib/lecture-repo-path.ts`。
 
+**已完成的讲义以 Gitea 仓库主分支为准,不是数据库。** 讲义管理页的「已有讲义」直接读取仓库主分支的 `.tex` 文件树(`listRepoLectureFiles`)并按文件夹层级展示;数据库的 `Lecture` 表只用于追踪「未完成」流程。管理员对已有讲义的「修改」(`reviseLectureOnMain`,编译校验通过后直接提交主分支)和「组合下载」(`combineLecturesPdf`,合并多份并编成一个 PDF)都按*仓库文件路径*操作,与数据库 id 无关。
+
 ### 鉴权(自研,无第三方库)
 
 会话是 HMAC-SHA256 签名的 cookie(`auth_session`),不是 JWT。**签名/解码逻辑实现了两份**:

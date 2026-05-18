@@ -8,7 +8,6 @@ export async function getOwnedTeacherTask(taskId: string, teacherId: string) {
       lecture: {
         select: {
           id: true,
-          code: true,
           title: true,
           chapter: true,
           description: true,
@@ -73,7 +72,7 @@ export async function findOwnedTeacherTask(taskId: string, teacherId: string) {
     include: {
       lecture: {
         select: {
-          code: true,
+          title: true,
           templatePath: true,
         },
       },

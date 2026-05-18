@@ -31,7 +31,6 @@ export async function submitTaskReviewAction(taskId: string) {
     include: {
       lecture: {
         select: {
-          code: true,
           title: true,
           templatePath: true,
         },
@@ -72,7 +71,7 @@ export async function submitTaskReviewAction(taskId: string) {
   try {
     const submission = await submitTaskToGiteaRepo({
       taskId: task.id,
-      lectureCode: task.lecture.code,
+      lectureTitle: task.lecture.title,
       repoFilePath: task.lecture.templatePath,
       branchName: task.branchName || `task/${task.id}`,
       texSource,

@@ -1,40 +1,36 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { reviseLectureOnMain } from "@/lib/gitea-submit";
-import { prisma } from "@/lib/prisma";
-
-type RouteContext = {
-  params: {
-    lectureId: string;
-  };
-};
+import { normalizeLectureRepoFilePath } from "@/lib/lecture-repo-path";
 
 /**
- * 修改已完成讲义并轻量发布：先编译校验，通过才直接提交到仓库主分支。
+ * 修改讲义并轻量发布：先编译校验，通过才直接提交到仓库主分支。
+ * 请求体：{ path: 仓库内的 .tex 路径, texSource: 新内容 }。
  */
-export async function POST(request: Request, { params }: RouteContext) {
+export async function POST(request: Request) {
   const user = await getCurrentUser();
 
   if (!user || user.role !== "admin") {
     return NextResponse.json({ ok: false, error: "未登录或无权限。" }, { status: 401 });
   }
 
-  const lecture = await prisma.lecture.findUnique({
-    where: { id: params.lectureId },
-    select: { id: true, status: true, templatePath: true },
-  });
-
-  if (!lecture) {
-    return NextResponse.json({ ok: false, error: "未找到对应讲义。" }, { status: 404 });
-  }
-
+  let rawPath = "";
   let texSource = "";
 
   try {
     const body = await request.json();
+    rawPath = String(body?.path ?? "");
     texSource = String(body?.texSource ?? "");
   } catch {
     return NextResponse.json({ ok: false, error: "请求体格式不正确。" }, { status: 400 });
+  }
+
+  let safePath = "";
+
+  try {
+    safePath = normalizeLectureRepoFilePath(rawPath);
+  } catch {
+    return NextResponse.json({ ok: false, error: "讲义路径不合法。" }, { status: 400 });
   }
 
   if (!texSource.trim()) {
@@ -42,10 +38,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   }
 
   try {
-    const result = await reviseLectureOnMain({
-      templatePath: lecture.templatePath,
-      content: texSource,
-    });
+    const result = await reviseLectureOnMain({ templatePath: safePath, content: texSource });
 
     if (!result.ok) {
       return NextResponse.json({

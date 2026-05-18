@@ -33,7 +33,6 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
     include: {
       lecture: {
         select: {
-          code: true,
           title: true,
           templatePath: true,
         },
@@ -123,7 +122,7 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
         <div>
           <h2>{task.title}</h2>
           <p>
-            {task.lecture.code} / {task.lecture.title} / {task.assignee.username}
+            {task.lecture.title} / {task.assignee.username}
           </p>
         </div>
         <span className="status-pill status-admin">{task.status}</span>
@@ -164,10 +163,6 @@ export default async function AdminReviewDetailPage({ params, searchParams }: Pa
             <article className="detail-card">
               <h3>讲义名称</h3>
               <p>{task.lecture.title}</p>
-            </article>
-            <article className="detail-card">
-              <h3>讲义编号</h3>
-              <p>{task.lecture.code}</p>
             </article>
             <article className="detail-card">
               <h3>老师账号</h3>

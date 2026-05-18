@@ -13,7 +13,7 @@ type TaskAssetInput = {
 
 type SubmitTaskToRepoInput = {
   taskId: string;
-  lectureCode: string;
+  lectureTitle: string;
   repoFilePath: string;
   branchName: string;
   texSource: string;
@@ -303,7 +303,7 @@ export async function submitTaskToGiteaRepo(
         "commit",
         "--allow-empty",
         "-m",
-        `Submit task ${input.taskId} for lecture ${input.lectureCode}`,
+        `Submit task ${input.taskId} for lecture ${input.lectureTitle}`,
       ],
       {
         cwd: runtime.repoDir,
@@ -536,15 +536,38 @@ export async function readRepoFileFromDefaultBranch(repoFilePath: string): Promi
   }
 }
 
+/** 列出仓库默认分支上的全部讲义 .tex 文件路径（用于「已有讲义」树）。 */
+export async function listRepoLectureFiles(): Promise<string[]> {
+  const runtime = await createGitRuntime();
+
+  try {
+    await cloneDefaultBranch(runtime);
+
+    const output = await runGit(
+      ["ls-tree", "-r", "--name-only", `origin/${runtime.config.defaultBranch}`],
+      {
+        cwd: runtime.repoDir,
+        env: runtime.gitEnv,
+      }
+    );
+
+    return output
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.toLowerCase().endsWith(".tex"))
+      .sort((a, b) => a.localeCompare(b, "zh-CN"));
+  } finally {
+    await rm(runtime.tempRoot, { recursive: true, force: true });
+  }
+}
+
 /**
- * 把多份已完成讲义合并并编译成一个 PDF。
+ * 把多份讲义合并并编译成一个 PDF。入参为仓库内的 .tex 文件路径。
  * 在仓库克隆目录里编译，素材文件随仓库一起就位，\graphicspath 负责定位。
  */
-export async function combineLecturesPdf(
-  lectures: Array<{ code: string; title: string; templatePath: string }>
-): Promise<Buffer> {
-  if (lectures.length === 0) {
-    throw new Error("请至少选择一份已完成讲义。");
+export async function combineLecturesPdf(paths: string[]): Promise<Buffer> {
+  if (paths.length === 0) {
+    throw new Error("请至少选择一份讲义。");
   }
 
   const runtime = await createGitRuntime();
@@ -554,19 +577,19 @@ export async function combineLecturesPdf(
 
     const items = [];
 
-    for (const lecture of lectures) {
-      const normalized = normalizeLectureRepoFilePath(lecture.templatePath);
+    for (const rawPath of paths) {
+      const normalized = normalizeLectureRepoFilePath(rawPath);
       let source: string;
 
       try {
         source = await readFile(path.join(runtime.repoDir, normalized), "utf8");
       } catch {
-        throw new Error(`讲义「${lecture.code} / ${lecture.title}」在仓库主分支中找不到源文件。`);
+        throw new Error(`讲义「${normalized}」在仓库主分支中找不到源文件。`);
       }
 
       const dir = path.posix.dirname(normalized);
       items.push({
-        title: `${lecture.code} ${lecture.title}`,
+        title: normalized,
         source,
         graphicsDir: dir === "." ? "" : dir,
       });

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { combineLecturesPdf } from "@/lib/gitea-submit";
-import { prisma } from "@/lib/prisma";
 
 function redirectWithError(request: Request, message: string) {
   const url = new URL("/admin/lectures", request.url);
@@ -10,8 +9,8 @@ function redirectWithError(request: Request, message: string) {
 }
 
 /**
- * 组合多份已完成讲义并下载成一个 PDF。
- * 浏览器以 GET 表单提交，勾选的讲义通过重复的 lectureId 查询参数传入。
+ * 组合多份讲义并下载成一个 PDF。
+ * 浏览器以 GET 表单提交，勾选的讲义通过重复的 path 查询参数（仓库文件路径）传入。
  */
 export async function GET(request: Request) {
   const user = await getCurrentUser();
@@ -20,24 +19,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "未登录或无权限。" }, { status: 401 });
   }
 
-  const ids = new URL(request.url).searchParams.getAll("lectureId").filter(Boolean);
+  const paths = new URL(request.url).searchParams.getAll("path").filter(Boolean);
 
-  if (ids.length === 0) {
-    return redirectWithError(request, "请至少勾选一份已完成讲义再组合下载。");
-  }
-
-  const lectures = await prisma.lecture.findMany({
-    where: { id: { in: ids }, status: "DONE" },
-    orderBy: { code: "asc" },
-    select: { code: true, title: true, templatePath: true },
-  });
-
-  if (lectures.length === 0) {
-    return redirectWithError(request, "未找到可组合的已完成讲义。");
+  if (paths.length === 0) {
+    return redirectWithError(request, "请至少勾选一份讲义再组合下载。");
   }
 
   try {
-    const pdf = await combineLecturesPdf(lectures);
+    const pdf = await combineLecturesPdf(paths);
 
     return new NextResponse(pdf, {
       status: 200,

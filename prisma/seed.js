@@ -56,7 +56,6 @@ async function main() {
   const adminLecture = await prisma.lecture.upsert({
     where: { id: "admin-demo-lecture" },
     update: {
-      code: "L00",
       title: "管理员示例讲次",
       chapter: "示例章节",
       description: "用于权限验证的管理员讲次",
@@ -67,7 +66,6 @@ async function main() {
     },
     create: {
       id: "admin-demo-lecture",
-      code: "L00",
       title: "管理员示例讲次",
       chapter: "示例章节",
       description: "用于权限验证的管理员讲次",
@@ -81,7 +79,6 @@ async function main() {
   const teacherLecture = await prisma.lecture.upsert({
     where: { id: "teacher-demo-lecture" },
     update: {
-      code: "L01",
       title: "老师示例讲次",
       chapter: "第 1 章",
       description: "用于权限验证的老师讲次",
@@ -92,7 +89,6 @@ async function main() {
     },
     create: {
       id: "teacher-demo-lecture",
-      code: "L01",
       title: "老师示例讲次",
       chapter: "第 1 章",
       description: "用于权限验证的老师讲次",

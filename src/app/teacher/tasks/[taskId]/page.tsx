@@ -32,9 +32,7 @@ export default async function TeacherTaskDetailPage({ params }: PageProps) {
       <section className="summary-banner">
         <div>
           <h2>{task.title}</h2>
-          <p>
-            所属讲义：{task.lecture.code} / {task.lecture.title}
-          </p>
+          <p>所属讲义：{task.lecture.title}</p>
         </div>
         <span className="status-pill status-teacher">{texFileName}</span>
       </section>
@@ -46,9 +44,7 @@ export default async function TeacherTaskDetailPage({ params }: PageProps) {
         </article>
         <article className="detail-card">
           <h3>所属讲义</h3>
-          <p>
-            {task.lecture.code} / {task.lecture.title}
-          </p>
+          <p>{task.lecture.title}</p>
         </article>
         <article className="detail-card">
           <h3>讲义文件</h3>

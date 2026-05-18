@@ -38,22 +38,12 @@ export default async function AdminLectureFormPage({ searchParams }: PageProps) 
       </div>
 
       {searchParams?.error ? (
-        <div className="feedback-banner error">请完整填写讲义编号和讲义标题。</div>
+        <div className="feedback-banner error">请填写讲义标题。</div>
       ) : null}
 
       <section className="form-card">
         <form action={saveLectureAction} className="admin-form-grid">
           <input type="hidden" name="lectureId" value={lecture?.id ?? ""} />
-
-          <label className="form-field">
-            <span>讲义编号 code</span>
-            <input
-              name="code"
-              type="text"
-              defaultValue={lecture?.code ?? ""}
-              placeholder="例如：L01"
-            />
-          </label>
 
           <label className="form-field">
             <span>讲义标题 title</span>

@@ -34,7 +34,6 @@ export async function saveLectureAction(formData: FormData) {
       })
     : null;
   const payload = {
-    code: String(formData.get("code") ?? "").trim(),
     title: String(formData.get("title") ?? "").trim(),
     description: String(formData.get("description") ?? "").trim() || null,
     deadline: normalizeDate(formData.get("deadline")),
@@ -44,7 +43,7 @@ export async function saveLectureAction(formData: FormData) {
     createdById: user.id,
   };
 
-  if (!payload.code || !payload.title) {
+  if (!payload.title) {
     redirect("/admin/lectures/new?error=missing");
   }
 
@@ -102,7 +101,6 @@ export async function assignTaskAction(formData: FormData) {
     where: { id: lectureId },
     select: {
       id: true,
-      code: true,
       title: true,
       chapter: true,
       description: true,

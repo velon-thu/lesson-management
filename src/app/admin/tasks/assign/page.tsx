@@ -6,6 +6,7 @@ import { assignTaskAction } from "@/app/admin/actions";
 import AdminSectionNav from "@/components/admin-section-nav";
 import EmptyState from "@/components/empty-state";
 import PageContainer from "@/components/page-container";
+import RepoFolderPicker from "@/components/repo-folder-picker";
 import SubmitButton from "@/components/submit-button";
 
 type PageProps = {
@@ -28,10 +29,9 @@ export default async function AdminTaskAssignPage({ searchParams }: PageProps) {
           none: {},
         },
       },
-      orderBy: { code: "asc" },
+      orderBy: { title: "asc" },
       select: {
         id: true,
-        code: true,
         title: true,
         status: true,
         templatePath: true,
@@ -57,7 +57,6 @@ export default async function AdminTaskAssignPage({ searchParams }: PageProps) {
         title: true,
         lecture: {
           select: {
-            code: true,
             title: true,
             status: true,
             templatePath: true,
@@ -119,7 +118,7 @@ export default async function AdminTaskAssignPage({ searchParams }: PageProps) {
                 <option value="">请选择讲义</option>
                 {lectures.map((lecture) => (
                   <option key={lecture.id} value={lecture.id}>
-                    {lecture.code} / {lecture.title}
+                    {lecture.title}
                   </option>
                 ))}
               </select>
@@ -137,23 +136,10 @@ export default async function AdminTaskAssignPage({ searchParams }: PageProps) {
               </select>
             </label>
 
-            <label className="form-field">
+            <div className="form-field form-field-full">
               <span>仓库文件夹</span>
-              <input
-                name="repoFolder"
-                type="text"
-                list="repoFolderOptions"
-                defaultValue={defaultRepoFolder}
-                placeholder="留空=仓库根目录；也可直接输入新文件夹名"
-              />
-              <datalist id="repoFolderOptions">
-                {repoFolders
-                  .filter((folder) => folder)
-                  .map((folder) => (
-                    <option key={folder} value={folder} />
-                  ))}
-              </datalist>
-            </label>
+              <RepoFolderPicker folders={repoFolders} defaultFolder={defaultRepoFolder} />
+            </div>
 
             <label className="form-field">
               <span>讲义文件名</span>
@@ -197,9 +183,7 @@ export default async function AdminTaskAssignPage({ searchParams }: PageProps) {
               {tasks.map((task) => (
                 <tr key={task.id}>
                   <td>{task.title}</td>
-                  <td>
-                    {task.lecture.code} / {task.lecture.title}
-                  </td>
+                  <td>{task.lecture.title}</td>
                   <td>{task.lecture.templatePath}</td>
                   <td>
                     {task.assignee.username}
