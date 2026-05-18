@@ -187,3 +187,42 @@ export async function assignTaskAction(formData: FormData) {
   revalidatePath("/admin/tasks/assign");
   redirect(`/admin/tasks/assign?success=1&lectureId=${lectureId}&teacherId=${teacherId}`);
 }
+
+export async function deleteTaskAction(formData: FormData) {
+  await requireRole("admin");
+
+  const taskId = String(formData.get("taskId") ?? "").trim();
+
+  if (!taskId) {
+    redirect("/admin/tasks/assign?error=任务不存在");
+  }
+
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: { id: true, draftId: true },
+  });
+
+  if (!task) {
+    redirect("/admin/tasks/assign?error=任务不存在");
+  }
+
+  // 彻底删除任务：提交记录、审核记录随外键级联删除；再删除其专属草稿。
+  await prisma.$transaction(async (tx) => {
+    await tx.task.delete({ where: { id: task.id } });
+
+    if (task.draftId) {
+      const remaining = await tx.task.count({ where: { draftId: task.draftId } });
+
+      if (remaining === 0) {
+        await tx.taskDraft.delete({ where: { id: task.draftId } });
+      }
+    }
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/lectures");
+  revalidatePath("/admin/tasks/assign");
+  revalidatePath("/admin/reviews");
+  revalidatePath("/teacher/tasks");
+  redirect("/admin/tasks/assign?success=deleted");
+}

@@ -2,8 +2,9 @@ import { requireRole } from "@/lib/auth";
 import { listRepoDirectories } from "@/lib/gitea-submit";
 import { getLectureRepoFolder, getLectureTexFileName } from "@/lib/lecture-repo-path";
 import { prisma } from "@/lib/prisma";
-import { assignTaskAction } from "@/app/admin/actions";
+import { assignTaskAction, deleteTaskAction } from "@/app/admin/actions";
 import AdminSectionNav from "@/components/admin-section-nav";
+import ConfirmButton from "@/components/confirm-button";
 import EmptyState from "@/components/empty-state";
 import PageContainer from "@/components/page-container";
 import RepoFolderPicker from "@/components/repo-folder-picker";
@@ -89,7 +90,9 @@ export default async function AdminTaskAssignPage({ searchParams }: PageProps) {
         <AdminSectionNav />
       </div>
 
-      {searchParams?.success ? (
+      {searchParams?.success === "deleted" ? (
+        <div className="feedback-banner success">任务已彻底删除。</div>
+      ) : searchParams?.success ? (
         <div className="feedback-banner success">任务已分配，初始草稿也已生成。</div>
       ) : null}
       {searchParams?.error ? (
@@ -177,6 +180,7 @@ export default async function AdminTaskAssignPage({ searchParams }: PageProps) {
                 <th>仓库文件</th>
                 <th>老师</th>
                 <th>状态</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -185,10 +189,23 @@ export default async function AdminTaskAssignPage({ searchParams }: PageProps) {
                   <td>{task.title}</td>
                   <td>{task.lecture.title}</td>
                   <td>{task.lecture.templatePath}</td>
-                  <td>
-                    {task.assignee.username}
-                  </td>
+                  <td>{task.assignee.username}</td>
                   <td>{task.lecture.status}</td>
+                  <td>
+                    {task.lecture.status === "DONE" ? (
+                      <form action={deleteTaskAction}>
+                        <input type="hidden" name="taskId" value={task.id} />
+                        <ConfirmButton
+                          message="删除后将彻底从数据库移除该任务（含提交记录、审核记录、草稿），老师端也不再可见。确定删除？"
+                          className="secondary-button compact-button"
+                        >
+                          删除
+                        </ConfirmButton>
+                      </form>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
