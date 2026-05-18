@@ -588,13 +588,43 @@ export async function combineLecturesPdf(
 }
 
 /**
+ * 编译预览已完成讲义的修改稿：在克隆目录里覆盖源文件并编译，不提交任何改动。
+ */
+export async function compileLecturePreview(params: {
+  templatePath: string;
+  content: string;
+}): Promise<{ ok: boolean; log: string; pdf: Buffer | null }> {
+  const runtime = await createGitRuntime();
+  const normalized = normalizeLectureRepoFilePath(params.templatePath);
+
+  try {
+    await cloneDefaultBranch(runtime);
+
+    const absPath = path.join(runtime.repoDir, normalized);
+    await mkdir(path.dirname(absPath), { recursive: true });
+    await writeFile(absPath, params.content, "utf8");
+
+    return await compileLatexInDirectory({
+      cwd: path.dirname(absPath),
+      entryFileName: path.basename(normalized),
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? sanitizeGitMessage(error.message, runtime.config) : "编译预览失败";
+    throw new Error(message);
+  } finally {
+    await rm(runtime.tempRoot, { recursive: true, force: true });
+  }
+}
+
+/**
  * 修改已完成讲义并轻量提交：在克隆目录里覆盖源文件、先编译校验，
  * 编译通过才直接提交到默认分支（不走任务/审核流程）。
  */
 export async function reviseLectureOnMain(params: {
   templatePath: string;
   content: string;
-}): Promise<{ ok: boolean; log: string }> {
+}): Promise<{ ok: boolean; log: string; pdf: Buffer | null }> {
   const runtime = await createGitRuntime();
   const normalized = normalizeLectureRepoFilePath(params.templatePath);
 
@@ -611,7 +641,7 @@ export async function reviseLectureOnMain(params: {
     });
 
     if (!compileResult.ok) {
-      return { ok: false, log: compileResult.log };
+      return { ok: false, log: compileResult.log, pdf: null };
     }
 
     // 仅暂存讲义源文件本身，避免把编译产物（pdf/aux/log）提交进仓库。
@@ -632,7 +662,7 @@ export async function reviseLectureOnMain(params: {
     }
 
     if (!hasChanges) {
-      return { ok: true, log: "讲义内容没有变化，无需提交。" };
+      return { ok: true, log: "讲义内容没有变化，无需提交。", pdf: compileResult.pdf };
     }
 
     await runGit(["commit", "-m", `Revise lecture ${normalized}`], {
@@ -644,7 +674,7 @@ export async function reviseLectureOnMain(params: {
       env: runtime.gitEnv,
     });
 
-    return { ok: true, log: compileResult.log };
+    return { ok: true, log: compileResult.log, pdf: compileResult.pdf };
   } catch (error) {
     const message =
       error instanceof Error ? sanitizeGitMessage(error.message, runtime.config) : "发布修改失败";

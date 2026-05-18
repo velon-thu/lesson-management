@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { reviseLectureOnMain } from "@/lib/gitea-submit";
+import { compileLecturePreview } from "@/lib/gitea-submit";
 import { prisma } from "@/lib/prisma";
 
 type RouteContext = {
@@ -10,7 +10,8 @@ type RouteContext = {
 };
 
 /**
- * 修改已完成讲义并轻量发布：先编译校验，通过才直接提交到仓库主分支。
+ * 编译预览已完成讲义的修改稿，不提交任何改动。
+ * 返回编译日志，成功时附带 base64 编码的 PDF 供编辑器原地预览。
  */
 export async function POST(request: Request, { params }: RouteContext) {
   const user = await getCurrentUser();
@@ -21,7 +22,7 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   const lecture = await prisma.lecture.findUnique({
     where: { id: params.lectureId },
-    select: { id: true, status: true, templatePath: true },
+    select: { id: true, templatePath: true },
   });
 
   if (!lecture) {
@@ -37,31 +38,19 @@ export async function POST(request: Request, { params }: RouteContext) {
     return NextResponse.json({ ok: false, error: "请求体格式不正确。" }, { status: 400 });
   }
 
-  if (!texSource.trim()) {
-    return NextResponse.json({ ok: false, error: "讲义内容不能为空。" }, { status: 400 });
-  }
-
   try {
-    const result = await reviseLectureOnMain({
+    const result = await compileLecturePreview({
       templatePath: lecture.templatePath,
       content: texSource,
     });
 
-    if (!result.ok) {
-      return NextResponse.json({
-        ok: false,
-        error: "编译未通过，已阻止发布，请根据日志修正后重试。",
-        log: result.log,
-      });
-    }
-
     return NextResponse.json({
-      ok: true,
+      ok: result.ok,
       log: result.log,
       pdf: result.pdf ? result.pdf.toString("base64") : null,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "发布修改失败。";
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    const message = error instanceof Error ? error.message : "编译预览失败。";
+    return NextResponse.json({ ok: false, log: message, pdf: null }, { status: 500 });
   }
 }

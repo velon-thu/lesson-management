@@ -1119,6 +1119,12 @@ code {
   font-size: 13px;
 }
 
+.editor-button-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .editor-save-indicator {
   display: inline-flex;
   align-items: center;
