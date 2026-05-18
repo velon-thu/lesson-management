@@ -19,7 +19,7 @@ function redirectToHome(request: Request, error: string, role?: string) {
     loginUrl.searchParams.set("role", role);
   }
 
-  return NextResponse.redirect(loginUrl);
+  return NextResponse.redirect(loginUrl, 303);
 }
 
 export async function POST(request: Request) {
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
   }
 
   const role: AppRole = user.role === UserRole.ADMIN ? "admin" : "teacher";
-  const response = NextResponse.redirect(new URL(getRedirectPathByRole(role), request.url));
+  const response = NextResponse.redirect(new URL(getRedirectPathByRole(role), request.url), 303);
 
   response.cookies.set({
     name: getSessionCookieName(),
