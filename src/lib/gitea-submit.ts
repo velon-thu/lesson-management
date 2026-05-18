@@ -67,6 +67,37 @@ function getGiteaConfig(): GiteaConfig {
   };
 }
 
+/**
+ * 通过 Gitea API 探测仓库的真实默认分支（main / master 等），
+ * 避免因 GITEA_DEFAULT_BRANCH 配置与实际分支名不一致而克隆失败。
+ * 探测失败时回退到环境变量里的配置值。
+ */
+async function resolveDefaultBranch(config: GiteaConfig): Promise<string> {
+  try {
+    const response = await fetch(
+      `${config.baseUrl}/api/v1/repos/${config.owner}/${config.repo}`,
+      { headers: { authorization: `token ${config.botToken}` } }
+    );
+
+    if (response.ok) {
+      const data = (await response.json()) as { default_branch?: unknown };
+
+      if (typeof data.default_branch === "string" && data.default_branch.trim()) {
+        return data.default_branch.trim();
+      }
+    }
+  } catch {
+    // 探测失败时回退到配置值。
+  }
+
+  return config.defaultBranch;
+}
+
+async function getResolvedGiteaConfig(): Promise<GiteaConfig> {
+  const config = getGiteaConfig();
+  return { ...config, defaultBranch: await resolveDefaultBranch(config) };
+}
+
 function sanitizeGitMessage(message: string, config: GiteaConfig) {
   return message
     .replaceAll(config.botToken, "[REDACTED_TOKEN]")
@@ -134,7 +165,7 @@ esac
 }
 
 async function createGitRuntime() {
-  const config = getGiteaConfig();
+  const config = await getResolvedGiteaConfig();
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "gitea-task-"));
   const repoDir = path.join(tempRoot, "repo");
   const askPassPath = await createGitAskPassScript(tempRoot);
@@ -210,7 +241,12 @@ export async function repoFileExistsInDefaultBranch(repoFilePath: string) {
   const normalizedPath = normalizeLectureRepoFilePath(repoFilePath);
 
   try {
-    await cloneDefaultBranch(runtime);
+    try {
+      await cloneDefaultBranch(runtime);
+    } catch {
+      // 仓库为空或没有默认分支：视作该文件不存在，让任务分配继续。
+      return false;
+    }
 
     try {
       await runGit(["cat-file", "-e", `origin/${runtime.config.defaultBranch}:${normalizedPath}`], {
@@ -400,7 +436,7 @@ export async function mergeTaskBranchToMain(params: {
   branchName: string;
   taskId: string;
 }): Promise<{ mergeCommitSha: string }> {
-  const config = getGiteaConfig();
+  const config = await getResolvedGiteaConfig();
   const apiBase = `${config.baseUrl}/api/v1/repos/${config.owner}/${config.repo}`;
 
   async function requestJson<T>(url: string, init?: RequestInit) {
