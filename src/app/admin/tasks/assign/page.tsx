@@ -139,16 +139,20 @@ export default async function AdminTaskAssignPage({ searchParams }: PageProps) {
 
             <label className="form-field">
               <span>仓库文件夹</span>
-              <select name="repoFolder" defaultValue={defaultRepoFolder}>
-                <option value="">仓库根目录</option>
+              <input
+                name="repoFolder"
+                type="text"
+                list="repoFolderOptions"
+                defaultValue={defaultRepoFolder}
+                placeholder="留空=仓库根目录；也可直接输入新文件夹名"
+              />
+              <datalist id="repoFolderOptions">
                 {repoFolders
                   .filter((folder) => folder)
                   .map((folder) => (
-                    <option key={folder} value={folder}>
-                      {folder}
-                    </option>
+                    <option key={folder} value={folder} />
                   ))}
-              </select>
+              </datalist>
             </label>
 
             <label className="form-field">
