@@ -146,12 +146,15 @@ export default async function AdminTaskAssignPage({ searchParams }: PageProps) {
 
             <label className="form-field">
               <span>讲义文件名</span>
-              <input
-                name="texFileName"
-                type="text"
-                defaultValue={defaultTexFileName}
-                placeholder="例如：test1.tex"
-              />
+              <div className="filename-field">
+                <input
+                  name="texFileName"
+                  type="text"
+                  defaultValue={defaultTexFileName.replace(/\.tex$/i, "")}
+                  placeholder="例如：main"
+                />
+                <span className="filename-suffix">.tex</span>
+              </div>
             </label>
 
             <div className="form-actions form-field-full">

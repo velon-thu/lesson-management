@@ -27,7 +27,12 @@ export function normalizeRepoFolder(input: string) {
 }
 
 export function normalizeTexFileName(input: string) {
-  const fileName = input.trim();
+  let fileName = input.trim();
+
+  // .tex 后缀固定：用户填不填都行，统一去掉再补回，保证结果只以单个 .tex 结尾。
+  if (fileName.toLowerCase().endsWith(".tex")) {
+    fileName = fileName.slice(0, -4).trim();
+  }
 
   if (!fileName) {
     throw new Error("请填写讲义文件名。");
@@ -37,11 +42,7 @@ export function normalizeTexFileName(input: string) {
     throw new Error("讲义文件名不能包含路径分隔符。");
   }
 
-  if (!fileName.endsWith(".tex")) {
-    throw new Error("讲义文件名必须以 .tex 结尾。");
-  }
-
-  return fileName;
+  return `${fileName}.tex`;
 }
 
 export function buildLectureRepoFilePath(repoFolder: string, texFileName: string) {

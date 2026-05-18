@@ -1397,6 +1397,49 @@ code {
   font-size: 13px;
 }
 
+/* 讲义文件名输入：固定 .tex 后缀 */
+.filename-field {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.filename-field:focus-within {
+  border-color: var(--brand-500);
+  box-shadow: var(--ring);
+}
+
+.filename-field input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 13px 14px;
+  background: transparent;
+}
+
+.filename-field input:focus {
+  outline: none;
+  box-shadow: none;
+  border: 0;
+}
+
+.filename-suffix {
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  background: var(--surface-2);
+  border-left: 1px solid var(--line);
+  color: var(--ink-500);
+  font-weight: 700;
+}
+
 @media (max-width: 900px) {
   .site-header-inner,
   .page-header,
