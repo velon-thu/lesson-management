@@ -75,7 +75,17 @@ Next.js 14 App Router(TypeScript、React 18)。路径别名 `@/*` → `src/*`。
 - `src/lib/` —— 集成边界:`gitea-submit.ts`(在临时 clone 中调用 `git` + Gitea REST API)、`latex.ts`(在临时目录中运行两遍 `xelatex`)、`minio.ts`(S3 客户端)、`prisma.ts`(单例 client)。
 - `src/components/teacher-editor-workspace.tsx` —— LaTeX 编辑器(CodeMirror 6 + `codemirror-lang-latex`)。
 
+### 老师端编辑器(Overleaf 风格)
+
+`teacher-editor-workspace.tsx` 是一个 CodeMirror 6 客户端组件,编辑/编译循环走 JSON API 而非 Server Action,以实现「不刷新整页、不丢光标」的原地编译:
+
+- `PUT /api/teacher/tasks/[taskId]/draft` —— 自动保存(停止输入约 1.5s 后)与 `Ctrl/⌘+S`,仅存草稿、标记待重新编译,**保留**上一次成功的 PDF。
+- `POST /api/teacher/tasks/[taskId]/compile` —— 「重新编译」按钮与 `Ctrl/⌘+Enter`,保存草稿 + xelatex 编译,返回状态/日志/可定位错误(`diagnostics`),前端原地刷新右侧 PDF iframe(靠 `?v=` 版本号防缓存)。
+- 编译日志经 `lib/latex-log.ts` 解析成带行号的错误/警告,在编辑器内用 lint 标记,并在「编译问题」面板里可点击跳转。
+- 因此 `GET .../pdf` 路由允许在「待重新编译」状态下仍返回上一次成功的 PDF —— `lastPdfPath` 永远指向最近一次成功产物。
+
 ### 约定
 
 - Server Action 完成写操作后,先对所有受影响的路由调用 `revalidatePath`,再 `redirect` 并带上 `success`/`error` 查询参数,页面读取这些参数渲染提示条。
+- 例外:老师端编辑器的保存/编译用上面的 JSON API 路由,不走 Server Action(需要原地更新、不整页跳转)。
 - `gitea-submit.ts` 每次操作都 clone 到独立的系统临时目录,并始终在 `finally` 中清理;git 凭据通过生成的 `GIT_ASKPASS` 脚本传入,错误信息在抛出前会清除其中的 bot token。

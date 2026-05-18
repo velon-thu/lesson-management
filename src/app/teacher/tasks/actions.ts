@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import { TaskStatus } from "@prisma/client";
 import { requireRole } from "@/lib/auth";
 import { submitTaskToGiteaRepo } from "@/lib/gitea-submit";
-import { compileLatexTask, COMPILE_STATUS } from "@/lib/latex";
+import { COMPILE_STATUS } from "@/lib/latex";
 import { uploadToMinio } from "@/lib/minio";
 import { prisma } from "@/lib/prisma";
 import { getOwnedTeacherTask } from "@/lib/teacher-task";
@@ -22,39 +22,6 @@ function buildTaskEditUrl(taskId: string, params?: Record<string, string>) {
   }
 
   return `${url.pathname}${url.search}`;
-}
-
-export async function saveTaskDraftAction(taskId: string, formData: FormData) {
-  const user = await requireRole("teacher");
-  const task = await getOwnedTeacherTask(taskId, user.id);
-  const texSource = String(formData.get("texSource") ?? "");
-
-  if (!task.draft) {
-    redirect(buildTaskEditUrl(taskId, { error: "missing-draft" }));
-  }
-
-  await prisma.$transaction([
-    prisma.taskDraft.update({
-      where: { id: task.draft.id },
-      data: {
-        texSource,
-      },
-    }),
-    prisma.task.update({
-      where: { id: task.id },
-      data: {
-        status: TaskStatus.IN_PROGRESS,
-        lastCompileStatus: COMPILE_STATUS.pending,
-        lastCompileLog: "草稿已变更，请重新编译。",
-        lastPdfPath: null,
-      },
-    }),
-  ]);
-
-  revalidatePath("/teacher/tasks");
-  revalidatePath(`/teacher/tasks/${taskId}`);
-  revalidatePath(`/teacher/tasks/${taskId}/edit`);
-  redirect(buildTaskEditUrl(taskId, { success: "saved" }));
 }
 
 export async function submitTaskReviewAction(taskId: string) {
@@ -148,38 +115,6 @@ export async function submitTaskReviewAction(taskId: string) {
   revalidatePath(`/teacher/tasks/${taskId}`);
   revalidatePath(`/teacher/tasks/${taskId}/edit`);
   redirect(buildTaskEditUrl(taskId, { success: "submitted" }));
-}
-
-export async function compilePreviewAction(taskId: string) {
-  const user = await requireRole("teacher");
-  const task = await getOwnedTeacherTask(taskId, user.id);
-
-  if (!task.draft) {
-    redirect(buildTaskEditUrl(taskId, { error: "missing-draft" }));
-  }
-
-  const result = await compileLatexTask({
-    taskId: task.id,
-    texSource: task.draft.texSource,
-    entryFilePath: task.lecture.templatePath,
-    assets: task.assets.map((asset) => ({
-      filePath: asset.filePath,
-    })),
-  });
-
-  await prisma.task.update({
-    where: { id: task.id },
-    data: {
-      lastCompileStatus: result.status,
-      lastCompileLog: result.log,
-      lastPdfPath: result.pdfPath,
-    },
-  });
-
-  revalidatePath("/teacher/tasks");
-  revalidatePath(`/teacher/tasks/${taskId}`);
-  revalidatePath(`/teacher/tasks/${taskId}/edit`);
-  redirect(buildTaskEditUrl(taskId, { success: result.ok ? "compiled" : "compile-failed" }));
 }
 
 function sanitizeFileName(fileName: string) {

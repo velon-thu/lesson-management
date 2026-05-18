@@ -34,7 +34,9 @@ export async function GET(_request: Request, { params }: RouteContext) {
     return NextResponse.json({ ok: false, error: "你没有权限查看这个 PDF。" }, { status: 403 });
   }
 
-  if (!task.lastPdfPath || task.lastCompileStatus !== "SUCCESS") {
+  // lastPdfPath 始终指向最近一次「成功」编译产物，因此即便当前状态为待重新编译，
+  // 也允许预览上一次的 PDF（与 Overleaf 一致：编译失败/未重编时仍显示旧 PDF）。
+  if (!task.lastPdfPath) {
     return NextResponse.json({ ok: false, error: "当前没有可预览的 PDF。" }, { status: 404 });
   }
 

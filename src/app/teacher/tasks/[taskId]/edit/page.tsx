@@ -1,12 +1,7 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { getLectureTexFileName } from "@/lib/lecture-repo-path";
-import {
-  compilePreviewAction,
-  saveTaskDraftAction,
-  submitTaskReviewAction,
-  uploadTaskAssetAction,
-} from "@/app/teacher/tasks/actions";
+import { submitTaskReviewAction, uploadTaskAssetAction } from "@/app/teacher/tasks/actions";
 import { getOwnedTeacherTask } from "@/lib/teacher-task";
 import EmptyState from "@/components/empty-state";
 import PageContainer from "@/components/page-container";
@@ -27,8 +22,6 @@ type PageProps = {
 export default async function TeacherTaskEditPage({ params, searchParams }: PageProps) {
   const user = await requireRole("teacher");
   const task = await getOwnedTeacherTask(params.taskId, user.id);
-  const saveDraft = saveTaskDraftAction.bind(null, task.id);
-  const compilePreview = compilePreviewAction.bind(null, task.id);
   const submitReview = submitTaskReviewAction.bind(null, task.id);
   const uploadAsset = uploadTaskAssetAction.bind(null, task.id);
   const texFileName = getLectureTexFileName(task.lecture.templatePath);
@@ -45,6 +38,7 @@ export default async function TeacherTaskEditPage({ params, searchParams }: Page
   const compileStatus = task.lastCompileStatus ?? "NOT_COMPILED";
   const showCompileTime =
     task.lastCompileStatus === "SUCCESS" || task.lastCompileStatus === "FAILED";
+  const initialCompiledAt = showCompileTime ? task.updatedAt.toISOString() : "";
 
   return (
     <PageContainer
@@ -67,17 +61,8 @@ export default async function TeacherTaskEditPage({ params, searchParams }: Page
         <span className="status-pill status-teacher">{task.lecture.status}</span>
       </section>
 
-      {success === "saved" ? (
-        <div className="feedback-banner success">草稿已保存到数据库。</div>
-      ) : null}
       {success === "submitted" ? (
         <div className="feedback-banner success">已提交审核，当前等待管理员处理。</div>
-      ) : null}
-      {success === "compiled" ? (
-        <div className="feedback-banner success">编译完成，现在可以预览 PDF。</div>
-      ) : null}
-      {success === "compile-failed" ? (
-        <div className="feedback-banner error">编译失败，请查看下方日志。</div>
       ) : null}
       {success === "uploaded" ? (
         <div className="feedback-banner success">图片已上传，下面提供可复制的 LaTeX 引用片段。</div>
@@ -85,141 +70,89 @@ export default async function TeacherTaskEditPage({ params, searchParams }: Page
       {error ? <div className="feedback-banner error">{error}</div> : null}
 
       <TeacherEditorWorkspace
+        taskId={task.id}
         texFileName={texFileName}
         texSource={task.draft?.texSource ?? ""}
-        pdfUrl={task.lastCompileStatus === "SUCCESS" && task.lastPdfPath ? `/api/teacher/tasks/${task.id}/pdf` : null}
-        saveAction={saveDraft}
+        initialHasPdf={Boolean(task.lastPdfPath)}
+        initialCompileStatus={compileStatus}
+        initialCompileLog={task.lastCompileLog ?? ""}
+        initialCompiledAt={initialCompiledAt}
       />
 
       <section className="editor-bottom-grid">
         <section className="form-card">
-            <div className="section-heading">
-              <h3>编译预览</h3>
-              <p>固定使用 xelatex，在隔离临时目录中编译，不开启 shell-escape。</p>
-            </div>
-            <div className="compile-meta">
-              <div className="detail-card">
-                <h3>最近一次编译状态</h3>
-                <p>{compileStatus}</p>
-              </div>
-              <div className="detail-card">
-                <h3>最近一次编译时间</h3>
-                <p>
-                  {showCompileTime
-                    ? task.updatedAt.toISOString().replace("T", " ").slice(0, 16)
-                    : "暂无成功/失败编译记录"}
-                </p>
-              </div>
-            </div>
-            <form action={compilePreview}>
-              <SubmitButton
-                idleText="编译预览"
-                pendingText="编译中..."
-                className="secondary-button"
-              />
-            </form>
+          <div className="section-heading">
+            <h3>提交审核</h3>
+            <p>提交前会做基础校验：{texFileName} 不能为空，且最近一次编译必须成功。</p>
+          </div>
+          <form action={submitReview}>
+            <SubmitButton idleText="提交审核" pendingText="提交中..." className="secondary-button" />
+          </form>
         </section>
 
         <section className="form-card">
-            <div className="section-heading">
-              <h3>提交审核</h3>
-              <p>提交前会做基础校验：{texFileName} 不能为空，且最近一次编译必须成功。</p>
+          <div className="section-heading">
+            <h3>上传图片</h3>
+            <p>上传成功后会记录到 `assets` 表，并生成可复制的 LaTeX 引用片段。</p>
+          </div>
+          <form action={uploadAsset} className="upload-form">
+            <label className="form-field">
+              <span>选择图片</span>
+              <input name="asset" type="file" accept="image/*" />
+            </label>
+            <SubmitButton idleText="上传图片" pendingText="上传中..." className="secondary-button" />
+          </form>
+
+          {snippet ? (
+            <div className="snippet-box">
+              <h4>LaTeX 引用片段</h4>
+              <textarea readOnly rows={4} value={snippet} />
             </div>
-            <form action={submitReview}>
-              <SubmitButton
-                idleText="提交审核"
-                pendingText="提交中..."
-                className="secondary-button"
-              />
-            </form>
+          ) : null}
         </section>
 
         <section className="form-card">
-            <div className="section-heading">
-              <h3>上传图片</h3>
-              <p>上传成功后会记录到 `assets` 表，并生成可复制的 LaTeX 引用片段。</p>
+          <div className="section-heading">
+            <h3>最近审核意见</h3>
+          </div>
+          {task.reviewRecords.length === 0 ? (
+            <EmptyState
+              title="暂无审核意见"
+              description="提交审核后，这里会显示最近的审核记录。"
+            />
+          ) : (
+            <div className="review-list">
+              {task.reviewRecords.map((record) => (
+                <div key={record.id} className="review-item">
+                  <strong>{record.action}</strong>
+                  <p>{record.comment || "暂无意见内容"}</p>
+                  <span>
+                    {record.reviewer.username} /{" "}
+                    {record.createdAt.toISOString().replace("T", " ").slice(0, 16)}
+                  </span>
+                </div>
+              ))}
             </div>
-            <form action={uploadAsset} className="upload-form">
-              <label className="form-field">
-                <span>选择图片</span>
-                <input name="asset" type="file" accept="image/*" />
-              </label>
-              <SubmitButton
-                idleText="上传图片"
-                pendingText="上传中..."
-                className="secondary-button"
-              />
-            </form>
-
-            {snippet ? (
-              <div className="snippet-box">
-                <h4>LaTeX 引用片段</h4>
-                <textarea readOnly rows={4} value={snippet} />
-              </div>
-            ) : null}
+          )}
         </section>
 
         <section className="form-card">
-            <div className="section-heading">
-              <h3>最近审核意见</h3>
+          <div className="section-heading">
+            <h3>已上传素材</h3>
+          </div>
+          {task.assets.length === 0 ? (
+            <EmptyState title="暂无素材" description="上传图片后，这里会显示最近素材记录。" />
+          ) : (
+            <div className="asset-list">
+              {task.assets.map((asset) => (
+                <div key={asset.id} className="asset-item">
+                  <strong>{asset.fileName}</strong>
+                  <p>{asset.filePath}</p>
+                  <span>{asset.createdAt.toISOString().replace("T", " ").slice(0, 16)}</span>
+                </div>
+              ))}
             </div>
-            {task.reviewRecords.length === 0 ? (
-              <EmptyState
-                title="暂无审核意见"
-                description="提交审核后，这里会显示最近的审核记录。"
-              />
-            ) : (
-              <div className="review-list">
-                {task.reviewRecords.map((record) => (
-                  <div key={record.id} className="review-item">
-                    <strong>{record.action}</strong>
-                    <p>{record.comment || "暂无意见内容"}</p>
-                    <span>
-                      {record.reviewer.username} /{" "}
-                      {record.createdAt.toISOString().replace("T", " ").slice(0, 16)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-        </section>
-
-        <section className="form-card">
-            <div className="section-heading">
-              <h3>编译日志</h3>
-            </div>
-            {task.lastCompileLog ? (
-              <div className="log-box">
-                <pre>{task.lastCompileLog}</pre>
-              </div>
-            ) : (
-              <EmptyState
-                title="暂无编译日志"
-                description="首次编译后，这里会显示最近一次编译的输出日志。"
-              />
-            )}
-        </section>
-
-        <section className="form-card">
-            <div className="section-heading">
-              <h3>已上传素材</h3>
-            </div>
-            {task.assets.length === 0 ? (
-              <EmptyState
-                title="暂无素材"
-                description="上传图片后，这里会显示最近素材记录。"
-              />
-            ) : (
-              <div className="asset-list">
-                {task.assets.map((asset) => (
-                  <div key={asset.id} className="asset-item">
-                    <strong>{asset.fileName}</strong>
-                    <p>{asset.filePath}</p>
-                    <span>{asset.createdAt.toISOString().replace("T", " ").slice(0, 16)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+          )}
         </section>
       </section>
     </PageContainer>

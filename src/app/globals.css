@@ -1061,3 +1061,116 @@ code {
     width: 100%;
   }
 }
+
+/* ===== 老师端编辑器（Overleaf 风格增强） ===== */
+.editor-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.editor-action-hint {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.editor-save-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.editor-save-indicator::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #cbd5e1;
+}
+
+.editor-save-indicator.is-saved::before {
+  background: #16a34a;
+}
+
+.editor-save-indicator.is-saving::before {
+  background: #f59e0b;
+}
+
+.editor-save-indicator.is-unsaved::before {
+  background: #dc2626;
+}
+
+.compile-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.compile-status-pill.is-success {
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+}
+
+.compile-status-pill.is-failed {
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
+}
+
+.compile-status-pill.is-pending {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.compile-status-pill.is-idle {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.diagnostic-list {
+  display: grid;
+  gap: 8px;
+  max-height: 280px;
+  overflow: auto;
+}
+
+.diagnostic-item {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.diagnostic-item:hover {
+  border-color: #2563eb;
+  background: #f8fafc;
+}
+
+.diagnostic-line {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.diagnostic-item.is-error .diagnostic-line {
+  color: #b91c1c;
+}
+
+.diagnostic-item.is-warning .diagnostic-line {
+  color: #b45309;
+}
+
+.diagnostic-message {
+  font-size: 13px;
+  color: #334155;
+  word-break: break-word;
+}

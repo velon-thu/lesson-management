@@ -62,3 +62,39 @@ export async function getOwnedTeacherTask(taskId: string, teacherId: string) {
 
   return task;
 }
+
+/**
+ * 不做重定向的归属校验版本，供 JSON API 路由使用：
+ * 任务不存在或不属于该老师时返回 null，由调用方决定响应状态码。
+ */
+export async function findOwnedTeacherTask(taskId: string, teacherId: string) {
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    include: {
+      lecture: {
+        select: {
+          code: true,
+          templatePath: true,
+        },
+      },
+      draft: {
+        select: {
+          id: true,
+          texSource: true,
+        },
+      },
+      assets: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          filePath: true,
+        },
+      },
+    },
+  });
+
+  if (!task || task.assigneeId !== teacherId) {
+    return null;
+  }
+
+  return task;
+}
