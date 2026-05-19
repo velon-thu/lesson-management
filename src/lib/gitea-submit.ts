@@ -347,6 +347,16 @@ export async function submitTaskToGiteaRepo(
       }
     );
 
+    // 校验讲义文件确实进入了本次提交，避免推送出不含讲义内容的空分支。
+    try {
+      await runGit(["cat-file", "-e", `HEAD:${contentPath}`], {
+        cwd: runtime.repoDir,
+        env: runtime.gitEnv,
+      });
+    } catch {
+      throw new Error(`讲义文件 ${contentPath} 未能写入提交，提交已中止，请重试。`);
+    }
+
     await runGit(["push", "-u", "origin", branchName], {
       cwd: runtime.repoDir,
       env: runtime.gitEnv,
@@ -513,6 +523,19 @@ export async function mergeTaskBranchToMain(params: {
       }
 
       pullNumber = existingPull.number;
+    }
+
+    // 合并前确认任务分支确有新提交，避免空 PR 被当成"合并成功"。
+    const commitsCheck = await requestJson<unknown[]>(`${apiBase}/pulls/${pullNumber}/commits`);
+
+    if (
+      commitsCheck.response.status === 200 &&
+      Array.isArray(commitsCheck.data) &&
+      commitsCheck.data.length === 0
+    ) {
+      throw new Error(
+        "任务分支与主分支没有差异：讲义内容未成功推送到仓库，已阻止空合并。请让老师重新提交。"
+      );
     }
 
     const mergeResult = await requestJson<{ sha?: string; message?: string }>(

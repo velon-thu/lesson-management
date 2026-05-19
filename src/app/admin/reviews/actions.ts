@@ -75,6 +75,10 @@ export async function handleReviewDecisionAction(taskId: string, formData: FormD
   }
 
   if (decision === "approve_merge") {
+    if (task.status === TaskStatus.MERGED || task.status === TaskStatus.COMPLETED) {
+      redirect(buildReviewUrl(taskId, { error: "该任务已合并，无需重复操作。" }));
+    }
+
     if (!task.branchName || !latestSubmission.commitSha) {
       redirect(buildReviewUrl(taskId, { error: "missing-branch" }));
     }
