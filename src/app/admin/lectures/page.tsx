@@ -120,6 +120,14 @@ export default async function AdminLecturesPage({ searchParams }: PageProps) {
         <div className="block-title">
           <h2>已有讲义</h2>
           <span className="count-pill">{lectureFiles.length}</span>
+          {lectureFiles.length > 0 ? (
+            <Link
+              href="/admin/lectures/combine"
+              className="secondary-link-button compact-button combine-entry-link"
+            >
+              组合下载讲义
+            </Link>
+          ) : null}
         </div>
         <p className="form-hint">来源为 Gitea 仓库主分支，按文件夹层级展示。</p>
         {repoError ? (
@@ -130,19 +138,9 @@ export default async function AdminLecturesPage({ searchParams }: PageProps) {
             description="讲义任务通过审核合并、或仓库里有 .tex 文件后，会出现在这里。"
           />
         ) : (
-          <form method="get" action="/api/admin/lectures/combine">
-            <div className="table-card">
-              <LectureTree files={lectureFiles} />
-            </div>
-            <div className="combine-bar">
-              <span className="editor-action-hint">
-                勾选多份讲义，组合编译成一个 PDF 下载。
-              </span>
-              <button type="submit" className="primary-button">
-                组合下载 PDF
-              </button>
-            </div>
-          </form>
+          <div className="table-card">
+            <LectureTree files={lectureFiles} />
+          </div>
         )}
       </div>
     </PageContainer>

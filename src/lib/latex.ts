@@ -137,17 +137,19 @@ export async function compileLatexTask(input: CompileTaskInput) {
 export async function compileLatexInDirectory(params: {
   cwd: string;
   entryFileName: string;
+  passes?: number;
 }): Promise<{ ok: boolean; log: string; pdf: Buffer | null }> {
   if (!(await hasXelatex())) {
     return { ok: false, log: buildMissingXelatexLog(), pdf: null };
   }
 
   const pdfFileName = `${path.parse(params.entryFileName).name}.pdf`;
+  const passes = params.passes && params.passes > 0 ? params.passes : 2;
 
   try {
     let output = "";
 
-    for (let run = 0; run < 2; run += 1) {
+    for (let run = 0; run < passes; run += 1) {
       const result = await execFileAsync(
         "xelatex",
         ["-interaction=nonstopmode", "-halt-on-error", "-file-line-error", params.entryFileName],

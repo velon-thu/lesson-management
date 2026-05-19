@@ -1,61 +1,100 @@
-type MergeItem = {
+type BookletChapter = {
   title: string;
   source: string;
   graphicsDir?: string;
 };
 
+type BuildBookletInput = {
+  chapters: BookletChapter[];
+  headerText: string;
+  coverFileName?: string;
+};
+
 const BEGIN_DOC = "\\begin{document}";
 const END_DOC = "\\end{document}";
 
-const DEFAULT_PREAMBLE = "\\documentclass{article}\n\\usepackage[UTF8]{ctex}";
-
-/** 把一份完整的 LaTeX 源码拆成「导言区」和「正文」。无 document 环境时整体视作正文。 */
-function splitDocument(source: string): { preamble: string; body: string } {
+/** 取出一份完整 LaTeX 源码的正文（\begin{document} 与 \end{document} 之间）。 */
+function extractBody(source: string): string {
   const beginIdx = source.indexOf(BEGIN_DOC);
   const endIdx = source.lastIndexOf(END_DOC);
 
   if (beginIdx === -1 || endIdx === -1 || endIdx < beginIdx) {
-    return { preamble: "", body: source.trim() };
+    return source.trim();
   }
 
-  return {
-    preamble: source.slice(0, beginIdx).trimEnd(),
-    body: source.slice(beginIdx + BEGIN_DOC.length, endIdx).trim(),
-  };
+  return source.slice(beginIdx + BEGIN_DOC.length, endIdx).trim();
+}
+
+/** 转义 LaTeX 特殊字符，用于把用户输入安全地放进章节标题、页眉等位置。 */
+function escapeLatex(input: string): string {
+  return input
+    .split("\\")
+    .map((segment) =>
+      segment
+        .replace(/([&%#_${}])/g, "\\$1")
+        .replace(/~/g, "\\textasciitilde{}")
+        .replace(/\^/g, "\\textasciicircum{}")
+    )
+    .join("\\textbackslash{}");
 }
 
 /**
- * 把多份已完成讲义合并成一份可编译的 LaTeX 文档：
- * 取第一份的导言区，正文依次拼接并以 \clearpage 分页。
- * 每份正文中的 \maketitle 会被移除，避免重复打印标题。
+ * 把多份讲义组装成一本可编译的「讲义合集」：ctexbook 书籍类，
+ * 每份讲义一章（\chapter，中文编号「第一章」），带目录、自定义页眉，
+ * 可选用 pdfpages 插入封面 PDF。
  */
-export function mergeLatexSources(items: MergeItem[]): string {
-  if (items.length === 0) {
+export function buildLectureBooklet({ chapters, headerText, coverFileName }: BuildBookletInput): string {
+  if (chapters.length === 0) {
     throw new Error("请至少选择一份讲义。");
   }
 
-  const basePreamble = splitDocument(items[0].source).preamble || DEFAULT_PREAMBLE;
-  const needsGraphicx = !/\\usepackage(\[[^\]]*\])?\{[^}]*graphicx[^}]*\}/.test(basePreamble);
-
   const graphicsDirs = Array.from(
-    new Set(items.map((item) => (item.graphicsDir ?? "").trim()))
+    new Set(chapters.map((chapter) => (chapter.graphicsDir ?? "").trim()))
   );
   const graphicsPath = `\\graphicspath{${graphicsDirs
     .map((dir) => `{${dir ? `${dir}/` : "./"}}`)
     .join("")}}`;
 
-  const bodies = items.map((item) => {
-    const body = splitDocument(item.source).body.replace(/\\maketitle/g, "").trim();
-    return `% ===== ${item.title} =====\n${body}`;
-  });
+  const preamble = [
+    "\\documentclass[12pt]{ctexbook}",
+    "\\usepackage{amsmath,amssymb,amsthm}",
+    "\\usepackage{geometry}",
+    "\\geometry{a4paper,margin=2.5cm}",
+    "\\usepackage{graphicx}",
+    "\\usepackage{enumitem}",
+    "\\usepackage{fancyhdr}",
+    coverFileName ? "\\usepackage{pdfpages}" : "",
+    graphicsPath,
+    "\\theoremstyle{definition}",
+    "\\newtheorem{definition}{定义}[section]",
+    "\\newtheorem{example}{例}[section]",
+    "\\theoremstyle{plain}",
+    "\\newtheorem{theorem}{定理}[section]",
+    "\\newtheorem{lemma}{引理}[section]",
+    "\\newtheorem{corollary}{推论}[section]",
+    "\\theoremstyle{remark}",
+    "\\newtheorem*{remark}{注}",
+    "\\setlength{\\headheight}{15pt}",
+    "\\pagestyle{fancy}",
+    "\\fancyhf{}",
+    `\\fancyhead[L]{${escapeLatex(headerText.trim())}}`,
+    "\\fancyhead[R]{\\leftmark}",
+    "\\fancyfoot[C]{\\thepage}",
+    "\\renewcommand{\\headrulewidth}{0.4pt}",
+  ].filter(Boolean);
 
-  const lines = [basePreamble];
+  const body: string[] = [];
 
-  if (needsGraphicx) {
-    lines.push("\\usepackage{graphicx}");
+  if (coverFileName) {
+    body.push(`\\includepdf[pages=1,pagecommand={\\thispagestyle{empty}}]{${coverFileName}}`);
   }
 
-  lines.push(graphicsPath, "", BEGIN_DOC, "", bodies.join("\n\n\\clearpage\n\n"), "", END_DOC, "");
+  body.push("\\tableofcontents", "");
 
-  return lines.join("\n");
+  for (const chapter of chapters) {
+    const chapterBody = extractBody(chapter.source).replace(/\\maketitle/g, "").trim();
+    body.push(`\\chapter{${escapeLatex(chapter.title.trim())}}`, "", chapterBody, "");
+  }
+
+  return [...preamble, "", "\\begin{document}", "", ...body, "\\end{document}", ""].join("\n");
 }

@@ -88,10 +88,7 @@ function FileRow({ node }: { node: FileNode }) {
   return (
     <li>
       <div className="tree-row tree-file-row">
-        <label className="tree-file-label">
-          <input type="checkbox" name="path" value={node.path} />
-          <span className="tree-file-name">{node.name}</span>
-        </label>
+        <span className="tree-file-name">{node.name}</span>
         <Link
           href={`/admin/lectures/revise?path=${encodeURIComponent(node.path)}`}
           className="secondary-link-button compact-button"

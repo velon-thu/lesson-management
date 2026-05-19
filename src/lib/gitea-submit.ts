@@ -4,7 +4,7 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { downloadFromMinio } from "@/lib/minio";
 import { compileLatexInDirectory } from "@/lib/latex";
-import { mergeLatexSources } from "@/lib/latex-merge";
+import { buildLectureBooklet } from "@/lib/latex-merge";
 import { normalizeLectureRepoFilePath } from "@/lib/lecture-repo-path";
 
 type TaskAssetInput = {
@@ -621,11 +621,15 @@ export async function listRepoLectureFiles(): Promise<string[]> {
 }
 
 /**
- * 把多份讲义合并并编译成一个 PDF。入参为仓库内的 .tex 文件路径。
+ * 把多份讲义组合编译成「讲义合集」PDF：每份讲义一章，带目录、可选封面、自定义页眉。
  * 在仓库克隆目录里编译，素材文件随仓库一起就位，\graphicspath 负责定位。
  */
-export async function combineLecturesPdf(paths: string[]): Promise<Buffer> {
-  if (paths.length === 0) {
+export async function combineLecturesBooklet(params: {
+  chapters: Array<{ path: string; title: string }>;
+  headerText: string;
+  coverPdf: Buffer | null;
+}): Promise<Buffer> {
+  if (params.chapters.length === 0) {
     throw new Error("请至少选择一份讲义。");
   }
 
@@ -634,10 +638,10 @@ export async function combineLecturesPdf(paths: string[]): Promise<Buffer> {
   try {
     await cloneDefaultBranch(runtime);
 
-    const items = [];
+    const bookletChapters = [];
 
-    for (const rawPath of paths) {
-      const normalized = normalizeLectureRepoFilePath(rawPath);
+    for (const chapter of params.chapters) {
+      const normalized = normalizeLectureRepoFilePath(chapter.path);
       let source: string;
 
       try {
@@ -647,17 +651,37 @@ export async function combineLecturesPdf(paths: string[]): Promise<Buffer> {
       }
 
       const dir = path.posix.dirname(normalized);
-      items.push({
-        title: normalized,
+      const fallbackTitle = path.posix.basename(normalized).replace(/\.tex$/i, "");
+      bookletChapters.push({
+        title: chapter.title.trim() || fallbackTitle,
         source,
         graphicsDir: dir === "." ? "" : dir,
       });
     }
 
-    const entryFileName = `_combined_${Date.now()}.tex`;
-    await writeFile(path.join(runtime.repoDir, entryFileName), mergeLatexSources(items), "utf8");
+    let coverFileName: string | undefined;
 
-    const result = await compileLatexInDirectory({ cwd: runtime.repoDir, entryFileName });
+    if (params.coverPdf) {
+      coverFileName = "_cover.pdf";
+      await writeFile(path.join(runtime.repoDir, coverFileName), params.coverPdf);
+    }
+
+    const entryFileName = `_booklet_${Date.now()}.tex`;
+    await writeFile(
+      path.join(runtime.repoDir, entryFileName),
+      buildLectureBooklet({
+        chapters: bookletChapters,
+        headerText: params.headerText,
+        coverFileName,
+      }),
+      "utf8"
+    );
+
+    const result = await compileLatexInDirectory({
+      cwd: runtime.repoDir,
+      entryFileName,
+      passes: 3,
+    });
 
     if (!result.ok || !result.pdf) {
       throw new Error(`组合讲义编译失败：\n${result.log}`);
