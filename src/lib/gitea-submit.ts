@@ -216,7 +216,7 @@ export async function listRepoDirectories() {
     await cloneDefaultBranch(runtime);
 
     const output = await runGit(
-      ["ls-tree", "-d", "-r", "--name-only", `origin/${runtime.config.defaultBranch}`],
+      ["-c", "core.quotePath=false", "ls-tree", "-d", "-r", "--name-only", `origin/${runtime.config.defaultBranch}`],
       {
         cwd: runtime.repoDir,
         env: runtime.gitEnv,
@@ -603,7 +603,7 @@ export async function listRepoLectureFiles(): Promise<string[]> {
     await cloneDefaultBranch(runtime);
 
     const output = await runGit(
-      ["ls-tree", "-r", "--name-only", `origin/${runtime.config.defaultBranch}`],
+      ["-c", "core.quotePath=false", "ls-tree", "-r", "--name-only", `origin/${runtime.config.defaultBranch}`],
       {
         cwd: runtime.repoDir,
         env: runtime.gitEnv,
