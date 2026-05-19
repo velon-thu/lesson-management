@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { redirectTo } from "@/lib/http";
 
 type SessionPayload = {
   userId: string;
@@ -88,18 +89,19 @@ export async function middleware(request: NextRequest) {
   );
 
   if (!session) {
-    const loginUrl = new URL("/", request.url);
-    loginUrl.searchParams.set("from", pathname);
-    loginUrl.searchParams.set("role", pathname.startsWith("/admin") ? "admin" : "teacher");
-    return NextResponse.redirect(loginUrl);
+    const params = new URLSearchParams({
+      from: pathname,
+      role: pathname.startsWith("/admin") ? "admin" : "teacher",
+    });
+    return redirectTo(`/?${params.toString()}`, 307);
   }
 
   if (pathname.startsWith("/admin") && session.role !== "admin") {
-    return NextResponse.redirect(new URL("/teacher", request.url));
+    return redirectTo("/teacher", 307);
   }
 
   if (pathname.startsWith("/teacher") && session.role !== "teacher") {
-    return NextResponse.redirect(new URL("/admin", request.url));
+    return redirectTo("/admin", 307);
   }
 
   const teacherTaskMatch = pathname.match(/^\/teacher\/tasks\/([^/]+)(?:\/edit)?$/);

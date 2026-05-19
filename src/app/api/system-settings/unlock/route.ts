@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { redirectTo } from "@/lib/http";
 import {
   createSystemSettingsAccessToken,
   getSystemSettingsCookieName,
@@ -10,10 +10,10 @@ export async function POST(request: Request) {
   const password = String(formData.get("password") ?? "");
 
   if (password !== getSystemSettingsPassword()) {
-    return NextResponse.redirect(new URL("/?settingsError=系统设置密码错误", request.url), 303);
+    return redirectTo(`/?settingsError=${encodeURIComponent("系统设置密码错误")}`);
   }
 
-  const response = NextResponse.redirect(new URL("/system-settings", request.url), 303);
+  const response = redirectTo("/system-settings");
   response.cookies.set({
     name: getSystemSettingsCookieName(),
     value: createSystemSettingsAccessToken(),
