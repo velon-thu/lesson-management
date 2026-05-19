@@ -79,6 +79,8 @@ export async function handleReviewDecisionAction(taskId: string, formData: FormD
       redirect(buildReviewUrl(taskId, { error: "missing-branch" }));
     }
 
+    let mergeError = "";
+
     try {
       const mergeResult = await mergeTaskBranchToMain({
         branchName: task.branchName,
@@ -117,11 +119,16 @@ export async function handleReviewDecisionAction(taskId: string, formData: FormD
       revalidatePath(`/admin/reviews/${taskId}`);
       revalidatePath(`/teacher/tasks/${taskId}`);
       revalidatePath(`/teacher/tasks/${taskId}/edit`);
-      redirect(buildReviewUrl(taskId, { success: "merged" }));
     } catch (error) {
-      const message = error instanceof Error ? error.message : "合并任务分支失败。";
-      redirect(buildReviewUrl(taskId, { error: message }));
+      mergeError = error instanceof Error ? error.message : "合并任务分支失败。";
     }
+
+    // redirect 必须在 try/catch 之外调用，否则成功跳转的异常会被 catch 吞掉。
+    if (mergeError) {
+      redirect(buildReviewUrl(taskId, { error: mergeError }));
+    }
+
+    redirect(buildReviewUrl(taskId, { success: "merged" }));
   }
 
   redirect(buildReviewUrl(taskId, { error: "invalid-decision" }));
