@@ -6,7 +6,13 @@ import AdminSectionNav from "@/components/admin-section-nav";
 import EmptyState from "@/components/empty-state";
 import PageContainer from "@/components/page-container";
 
-export default async function AdminReviewsPage() {
+type PageProps = {
+  searchParams?: {
+    success?: string;
+  };
+};
+
+export default async function AdminReviewsPage({ searchParams }: PageProps) {
   await requireRole("admin");
 
   const tasks = await prisma.task.findMany({
@@ -48,6 +54,10 @@ export default async function AdminReviewsPage() {
       <div className="page-header">
         <AdminSectionNav />
       </div>
+
+      {searchParams?.success === "merged" ? (
+        <div className="feedback-banner success">已确认并合并到 Gitea 主分支，任务审核完成。</div>
+      ) : null}
 
       {tasks.length === 0 ? (
         <EmptyState

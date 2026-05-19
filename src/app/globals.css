@@ -1125,6 +1125,10 @@ code {
   flex-wrap: wrap;
 }
 
+.editor-action-bar-end {
+  justify-content: flex-end;
+}
+
 .editor-save-indicator {
   display: inline-flex;
   align-items: center;

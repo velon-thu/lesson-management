@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TaskStatus } from "@prisma/client";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import EmptyState from "@/components/empty-state";
@@ -7,9 +8,13 @@ import PageContainer from "@/components/page-container";
 export default async function TeacherTasksPage() {
   const user = await requireRole("teacher");
 
+  // 任务一旦提交（SUBMITTED 及以后），就从老师端列表中消失，转交管理员处理。
   const tasks = await prisma.task.findMany({
     where: {
       assigneeId: user.id,
+      status: {
+        in: [TaskStatus.ASSIGNED, TaskStatus.IN_PROGRESS, TaskStatus.CHANGES_REQUESTED],
+      },
     },
     orderBy: { updatedAt: "desc" },
     include: {

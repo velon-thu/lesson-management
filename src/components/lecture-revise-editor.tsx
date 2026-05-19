@@ -56,6 +56,10 @@ type LectureReviseEditorProps = {
   texFileName: string;
   initialSource: string;
   loadError?: string;
+  compileEndpoint?: string;
+  submitEndpoint?: string;
+  submitLabel?: string;
+  successRedirect?: string;
 };
 
 export default function LectureReviseEditor({
@@ -63,6 +67,10 @@ export default function LectureReviseEditor({
   texFileName,
   initialSource,
   loadError = "",
+  compileEndpoint = "/api/admin/lectures/compile-preview",
+  submitEndpoint = "/api/admin/lectures/revise",
+  submitLabel = "保存并发布到主分支",
+  successRedirect,
 }: LectureReviseEditorProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const draggingRef = useRef(false);
@@ -103,7 +111,7 @@ export default function LectureReviseEditor({
     setResult(null);
 
     try {
-      const response = await fetch("/api/admin/lectures/compile-preview", {
+      const response = await fetch(compileEndpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ path: lecturePath, texSource: view.state.doc.toString() }),
@@ -137,7 +145,7 @@ export default function LectureReviseEditor({
     setResult(null);
 
     try {
-      const response = await fetch("/api/admin/lectures/revise", {
+      const response = await fetch(submitEndpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ path: lecturePath, texSource: view.state.doc.toString() }),
@@ -150,6 +158,10 @@ export default function LectureReviseEditor({
       }
 
       if (data?.ok) {
+        if (successRedirect) {
+          window.location.assign(successRedirect);
+          return;
+        }
         applyPdf(typeof data?.pdf === "string" ? data.pdf : null);
         setCompileStatus("SUCCESS");
         setResult({ ok: true, message: "修改已编译通过并发布到仓库主分支。" });
@@ -281,7 +293,7 @@ export default function LectureReviseEditor({
             </label>
             <div className="editor-action-bar">
               <span className="editor-action-hint">
-                Ctrl/⌘ + Enter 编译预览；发布会先编译校验，通过才提交回主分支
+                Ctrl/⌘ + Enter 可快速编译预览；确认操作前会先编译校验，通过才会执行
               </span>
               <div className="editor-button-row">
                 <button
@@ -298,7 +310,7 @@ export default function LectureReviseEditor({
                   onClick={() => void publish()}
                   disabled={compiling || publishing || Boolean(loadError)}
                 >
-                  {publishing ? "发布中…" : "发布到主分支"}
+                  {publishing ? "处理中…" : submitLabel}
                 </button>
               </div>
             </div>

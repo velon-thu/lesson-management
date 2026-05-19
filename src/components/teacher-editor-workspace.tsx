@@ -621,10 +621,7 @@ export default function TeacherEditorWorkspace({
                 <div ref={editorHostRef} className="editor-codemirror-shell" />
               </div>
             </label>
-            <div className="editor-action-bar">
-              <span className="editor-action-hint">
-                编译即保存草稿，快捷键 Ctrl/⌘ + Enter；Ctrl/⌘ + S 仅保存
-              </span>
+            <div className="editor-action-bar editor-action-bar-end">
               <button
                 type="button"
                 className="primary-button"
