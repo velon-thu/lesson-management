@@ -693,12 +693,24 @@ export async function combineLecturesBooklet(params: {
   }
 }
 
+/** 把任务素材从 MinIO 下载到讲义 .tex 同级目录，使 \includegraphics 能定位到图片。 */
+async function writeAssetsIntoDirectory(lectureDir: string, assets: TaskAssetInput[]) {
+  for (const asset of assets) {
+    const localPath = path.join(lectureDir, asset.filePath);
+    await mkdir(path.dirname(localPath), { recursive: true });
+    const downloaded = await downloadFromMinio(asset.filePath);
+    await writeFile(localPath, downloaded.body);
+  }
+}
+
 /**
- * 编译预览已完成讲义的修改稿：在克隆目录里覆盖源文件并编译，不提交任何改动。
+ * 编译预览讲义修改稿：在克隆目录里覆盖源文件并编译，不提交任何改动。
+ * 传入 assets 时会从 MinIO 下载素材（审核尚未合并的任务讲义需要）。
  */
 export async function compileLecturePreview(params: {
   templatePath: string;
   content: string;
+  assets?: TaskAssetInput[];
 }): Promise<{ ok: boolean; log: string; pdf: Buffer | null }> {
   const runtime = await createGitRuntime();
   const normalized = normalizeLectureRepoFilePath(params.templatePath);
@@ -709,6 +721,10 @@ export async function compileLecturePreview(params: {
     const absPath = path.join(runtime.repoDir, normalized);
     await mkdir(path.dirname(absPath), { recursive: true });
     await writeFile(absPath, ensureGraphicsPackage(params.content), "utf8");
+
+    if (params.assets?.length) {
+      await writeAssetsIntoDirectory(path.dirname(absPath), params.assets);
+    }
 
     return await compileLatexInDirectory({
       cwd: path.dirname(absPath),
@@ -730,6 +746,7 @@ export async function compileLecturePreview(params: {
 export async function reviseLectureOnMain(params: {
   templatePath: string;
   content: string;
+  assets?: TaskAssetInput[];
 }): Promise<{ ok: boolean; log: string; pdf: Buffer | null }> {
   const runtime = await createGitRuntime();
   const normalized = normalizeLectureRepoFilePath(params.templatePath);
@@ -741,6 +758,10 @@ export async function reviseLectureOnMain(params: {
     await mkdir(path.dirname(absPath), { recursive: true });
     await writeFile(absPath, ensureGraphicsPackage(params.content), "utf8");
 
+    if (params.assets?.length) {
+      await writeAssetsIntoDirectory(path.dirname(absPath), params.assets);
+    }
+
     const compileResult = await compileLatexInDirectory({
       cwd: path.dirname(absPath),
       entryFileName: path.basename(normalized),
@@ -750,8 +771,13 @@ export async function reviseLectureOnMain(params: {
       return { ok: false, log: compileResult.log, pdf: null };
     }
 
-    // 仅暂存讲义源文件本身，避免把编译产物（pdf/aux/log）提交进仓库。
-    await runGit(["add", "--", normalized], {
+    // 仅暂存讲义源文件与素材，避免把编译产物（pdf/aux/log）提交进仓库。
+    const lectureDir = path.posix.dirname(normalized);
+    const addPaths = [
+      normalized,
+      ...(params.assets ?? []).map((asset) => path.posix.join(lectureDir, asset.filePath)),
+    ];
+    await runGit(["add", "--", ...addPaths], {
       cwd: runtime.repoDir,
       env: runtime.gitEnv,
     });

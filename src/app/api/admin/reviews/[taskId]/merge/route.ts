@@ -27,6 +27,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     include: {
       lecture: { select: { id: true, templatePath: true } },
       submissions: { orderBy: { submittedAt: "desc" }, take: 1, select: { id: true } },
+      assets: { select: { filePath: true } },
     },
   });
 
@@ -55,6 +56,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     const result = await reviseLectureOnMain({
       templatePath: task.lecture.templatePath,
       content: texSource,
+      assets: task.assets,
     });
 
     if (!result.ok) {

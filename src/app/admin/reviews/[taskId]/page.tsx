@@ -81,7 +81,7 @@ export default async function AdminReviewDetailPage({ params }: PageProps) {
         lecturePath={task.lecture.templatePath}
         texFileName={texFileName}
         initialSource={task.draft?.texSource ?? ""}
-        compileEndpoint="/api/admin/lectures/compile-preview"
+        compileEndpoint={`/api/admin/reviews/${task.id}/compile-preview`}
         submitEndpoint={`/api/admin/reviews/${task.id}/merge`}
         submitLabel="确认并合并到 Gitea"
         successRedirect="/admin/reviews?success=merged"
