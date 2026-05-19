@@ -13,6 +13,29 @@ export const COMPILE_STATUS = {
   pending: "PENDING_RECOMPILE",
 } as const;
 
+/**
+ * 若源码用到 \includegraphics 但导言区未加载 graphicx，则在 \documentclass 之后补上。
+ * 早期讲义模板没有 graphicx，插图后会因 \includegraphics 未定义而编译失败。
+ */
+export function ensureGraphicsPackage(texSource: string): string {
+  if (!texSource.includes("\\includegraphics")) {
+    return texSource;
+  }
+
+  if (/\\usepackage(\[[^\]]*\])?\{[^}]*graphicx[^}]*\}/.test(texSource)) {
+    return texSource;
+  }
+
+  const docClass = texSource.match(/\\documentclass(\[[^\]]*\])?\{[^}]*\}/);
+
+  if (!docClass || docClass.index === undefined) {
+    return texSource;
+  }
+
+  const insertAt = docClass.index + docClass[0].length;
+  return `${texSource.slice(0, insertAt)}\n\\usepackage{graphicx}${texSource.slice(insertAt)}`;
+}
+
 export async function hasXelatex() {
   try {
     await execFileAsync("xelatex", ["--version"], { timeout: 10000 });
@@ -72,7 +95,10 @@ export async function compileLatexTask(input: CompileTaskInput) {
     };
   }
 
-  const { tempRoot, entryFilePath } = await prepareCompileDirectory(input);
+  const { tempRoot, entryFilePath } = await prepareCompileDirectory({
+    ...input,
+    texSource: ensureGraphicsPackage(input.texSource),
+  });
   const compileCwd = path.dirname(entryFilePath);
   const entryFileName = path.basename(entryFilePath);
   const pdfFileName = `${path.parse(entryFileName).name}.pdf`;

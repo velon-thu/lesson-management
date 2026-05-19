@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { downloadFromMinio } from "@/lib/minio";
-import { compileLatexInDirectory } from "@/lib/latex";
+import { compileLatexInDirectory, ensureGraphicsPackage } from "@/lib/latex";
 import { buildLectureBooklet } from "@/lib/latex-merge";
 import { normalizeLectureRepoFilePath } from "@/lib/lecture-repo-path";
 
@@ -708,7 +708,7 @@ export async function compileLecturePreview(params: {
 
     const absPath = path.join(runtime.repoDir, normalized);
     await mkdir(path.dirname(absPath), { recursive: true });
-    await writeFile(absPath, params.content, "utf8");
+    await writeFile(absPath, ensureGraphicsPackage(params.content), "utf8");
 
     return await compileLatexInDirectory({
       cwd: path.dirname(absPath),
@@ -739,7 +739,7 @@ export async function reviseLectureOnMain(params: {
 
     const absPath = path.join(runtime.repoDir, normalized);
     await mkdir(path.dirname(absPath), { recursive: true });
-    await writeFile(absPath, params.content, "utf8");
+    await writeFile(absPath, ensureGraphicsPackage(params.content), "utf8");
 
     const compileResult = await compileLatexInDirectory({
       cwd: path.dirname(absPath),
