@@ -452,6 +452,155 @@ code {
   border-color: #c7e8d2;
 }
 
+/* ===== 欢迎页 / 封面 ===== */
+.welcome {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 20px;
+  background-color: #eef0fa;
+  background-image:
+    radial-gradient(38% 44% at 12% 16%, rgba(124, 134, 245, 0.5), transparent 70%),
+    radial-gradient(42% 50% at 88% 20%, rgba(125, 170, 250, 0.45), transparent 72%),
+    radial-gradient(48% 52% at 84% 90%, rgba(250, 188, 165, 0.45), transparent 72%),
+    radial-gradient(42% 48% at 14% 88%, rgba(173, 150, 248, 0.42), transparent 72%);
+}
+
+.welcome-inner {
+  width: min(560px, 100%);
+  display: grid;
+  gap: 30px;
+}
+
+.welcome-brand {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+}
+
+.welcome-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--brand-600);
+  box-shadow: 0 14px 32px rgba(43, 49, 120, 0.2);
+}
+
+.welcome-logo svg {
+  width: 32px;
+  height: 32px;
+}
+
+.welcome-title {
+  margin: 0;
+  text-align: center;
+  font-size: clamp(21px, 3.2vw, 30px);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+  text-shadow: 0 2px 16px rgba(40, 46, 110, 0.4);
+}
+
+.welcome-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.welcome-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 22px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 16px 38px rgba(43, 49, 120, 0.15);
+  font: inherit;
+  text-align: left;
+  color: var(--ink-900);
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.2s ease;
+}
+
+.welcome-card::after {
+  content: "";
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 88px;
+  height: 88px;
+  background-image: radial-gradient(currentColor 1.4px, transparent 1.6px);
+  background-size: 12px 12px;
+  color: #1f2a52;
+  opacity: 0.08;
+}
+
+.welcome-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 24px 50px rgba(43, 49, 120, 0.22);
+}
+
+.welcome-card-wide {
+  grid-column: 1 / -1;
+}
+
+.welcome-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 54px;
+  height: 54px;
+  border-radius: 15px;
+}
+
+.welcome-card-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.welcome-card-label {
+  font-size: 21px;
+  font-weight: 700;
+}
+
+.welcome-card-admin .welcome-card-icon {
+  background: #e3e9fd;
+  color: #3551c8;
+}
+
+.welcome-card-teacher .welcome-card-icon {
+  background: #fde7da;
+  color: #d97746;
+}
+
+.welcome-card-settings .welcome-card-icon {
+  background: #ece6fb;
+  color: #6d4ed0;
+}
+
+.welcome-auth .auth-card {
+  width: 100%;
+  box-shadow: 0 24px 56px rgba(43, 49, 120, 0.22);
+}
+
+@media (max-width: 560px) {
+  .welcome-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
 .auth-layout {
   display: flex;
   justify-content: center;
